@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#102a43">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="CursoIA">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>CursoIA</title>
+    <link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.svg">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="program-panel" aria-labelledby="page-title">
+        <p class="eyebrow">Programa IA aplicada</p>
+        <h1 id="page-title">Registro al curso</h1>
+        <p class="summary">Reservá tu lugar y ayudanos a ubicarte en el grupo correcto según tu experiencia.</p>
+
+        <div class="program-note" aria-label="Datos del curso">
+          <span>Inicio próximo</span>
+          <strong>Agosto 2026</strong>
+        </div>
+      </section>
+<section class="install-panel" id="installPanel" aria-label="Instalar aplicacion" hidden>
+  <div>
+    <p class="install-title">Instalar app</p>
+    <p class="install-copy" id="installCopy">Agrega este registro a tu dispositivo para usarlo sin buscar el enlace.</p>
+  </div>
+  <button class="install-button" id="installButton" type="button">Instalar</button>
+</section>
+<section class="form-panel" aria-label="Formulario de registro">
+        <form class="registration-form" id="registrationForm">
+          <div class="field-grid">
+            <label>
+              Nombre completo
+              <input name="fullName" autocomplete="name" required minlength="3" placeholder="Ej. Ana Martinez">
+            </label>
+
+            <label>
+              Correo electrónico
+              <input name="email" type="email" autocomplete="email" required placeholder="ana@email.com">
+            </label>
+
+            <label>
+              Teléfono
+              <input name="phone" type="tel" autocomplete="tel" required placeholder="+54 9 11 1234 5678">
+            </label>
+
+            <label>
+              Edad
+              <input name="age" type="number" min="13" max="99" required placeholder="25">
+            </label>
+
+            <label>
+              Nivel actual
+              <select name="level" required>
+                <option value="">Seleccionar</option>
+                <option>Principiante</option>
+                <option>Intermedio</option>
+                <option>Avanzado</option>
+              </select>
+            </label>
+
+            <label>
+              Modalidad preferida
+              <select name="mode" required>
+                <option value="">Seleccionar</option>
+                <option>Online</option>
+                <option>Presencial</option>
+                <option>Híbrida</option>
+              </select>
+            </label>
+          </div>
+
+          <label>
+            Objetivo principal
+            <textarea name="goal" rows="4" required placeholder="Contanos qué actividades realizas todos los días que se podrías mejorar con el curso?"></textarea>
+          </label>
+
+          <label class="consent">
+            <input name="consent" type="checkbox" required>
+            Acepto recibir información sobre el curso y sus fechas de inicio.
+          </label>
+
+          <button type="submit">Enviar registro</button>
+          <p class="status" id="status" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+    </main>
+
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

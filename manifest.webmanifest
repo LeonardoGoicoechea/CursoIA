@@ -1,0 +1,25 @@
+{
+  "name": "CursoIA",
+  "short_name": "CursoIA",
+  "description": "Formulario PWA para registrarse a un curso de inteligencia artificial.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#edf2f7",
+  "theme_color": "#102a43",
+  "icons": [
+    {
+      "src": "icons/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "id": "./",
+  "scope": "./"
+}

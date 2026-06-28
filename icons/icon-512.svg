@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Curso IA">
+  <rect width="512" height="512" rx="96" fill="#155e75"/>
+  <circle cx="256" cy="208" r="92" fill="#f5f7f8"/>
+  <path d="M140 378c22-64 64-96 116-96s94 32 116 96" fill="none" stroke="#f5f7f8" stroke-width="38" stroke-linecap="round"/>
+  <path d="M208 208h96M256 160v96" stroke="#d97706" stroke-width="28" stroke-linecap="round"/>
+</svg>
