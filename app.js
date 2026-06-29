@@ -128,6 +128,12 @@ const scrollToViewStart = (viewId) => {
   target.scrollIntoView({ behavior: "smooth", block: "start" });
 };
 
+const scrollToWorkspaceStart = () => {
+  const target = statusEl || document.querySelector(".workspace");
+  if (!target) return;
+  target.scrollIntoView({ behavior: "smooth", block: "start" });
+};
+
 const readModules = () => readJson(STORAGE_KEYS.modules, {});
 
 const writeModuleState = (moduleId, patch) => {
@@ -527,7 +533,12 @@ navLinks.forEach((link) => {
 });
 
 document.querySelectorAll("[data-jump]").forEach((button) => {
-  button.addEventListener("click", () => showView(button.dataset.jump));
+  button.addEventListener("click", () => {
+    showView(button.dataset.jump);
+    const link = navLinks.find((item) => item.dataset.target === button.dataset.jump);
+    if (link) history.replaceState(null, "", link.getAttribute("href"));
+    scrollToWorkspaceStart();
+  });
 });
 
 document.querySelectorAll("[data-audience]").forEach((button) => {
