@@ -141,8 +141,8 @@ const buildEnvelope = (moduleId, payload) => {
     nivel: payload.aiExperience || payload.nivel || "",
     modality: payload.participantType || payload.modality || "",
     modalidad: payload.participantType || payload.modalidad || "",
-    consent: payload.consent || "accepted",
-    consentimiento: payload.consentimiento || "accepted"
+    consent: true,
+    consentimiento: true
   };
 
   return {
