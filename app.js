@@ -121,6 +121,13 @@ const isViewAvailable = (viewId) => {
   return viewIndex >= 0 && viewIndex <= pendingIndex;
 };
 
+const scrollToViewStart = (viewId) => {
+  const view = views.find((item) => item.dataset.moduleView === viewId);
+  const target = view || document.querySelector(".workspace");
+  if (!target) return;
+  target.scrollIntoView({ behavior: "smooth", block: "start" });
+};
+
 const readModules = () => readJson(STORAGE_KEYS.modules, {});
 
 const writeModuleState = (moduleId, patch) => {
@@ -360,7 +367,7 @@ const goToView = (viewId) => {
   if (!link) return;
   showView(viewId);
   history.replaceState(null, "", link.getAttribute("href"));
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  scrollToViewStart(viewId);
 };
 
 const showContinueFor = (moduleId) => {
@@ -439,8 +446,12 @@ const renderProgress = () => {
   navLinks.forEach((link) => {
     const moduleId = link.dataset.target;
     const state = modules[moduleId];
-    link.dataset.state = MODULES.some((item) => item.id === moduleId) ? stateLabel(state) : "";
     const available = isViewAvailable(moduleId);
+    link.dataset.state = !available
+      ? "bloqueado"
+      : MODULES.some((item) => item.id === moduleId)
+        ? stateLabel(state)
+        : "";
     link.classList.toggle("locked", !available);
     link.setAttribute("aria-disabled", String(!available));
   });
@@ -511,8 +522,7 @@ navLinks.forEach((link) => {
       goToView(firstPendingView());
       return;
     }
-    showView(link.dataset.target);
-    history.replaceState(null, "", link.getAttribute("href"));
+    goToView(link.dataset.target);
   });
 });
 
@@ -576,4 +586,9 @@ renderProgress();
 
 const initialHash = window.location.hash.replace("#", "");
 const initialView = views.find((view) => view.id === initialHash)?.dataset.moduleView || "welcome";
-showView(initialView);
+const resolvedInitialView = isViewAvailable(initialView) ? initialView : firstPendingView();
+showView(resolvedInitialView);
+if (resolvedInitialView !== initialView) {
+  const link = navLinks.find((item) => item.dataset.target === resolvedInitialView);
+  if (link) history.replaceState(null, "", link.getAttribute("href"));
+}
