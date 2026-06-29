@@ -140,7 +140,9 @@ const buildEnvelope = (moduleId, payload) => {
     level: payload.aiExperience || payload.level || "",
     nivel: payload.aiExperience || payload.nivel || "",
     modality: payload.participantType || payload.modality || "",
-    modalidad: payload.participantType || payload.modalidad || ""
+    modalidad: payload.participantType || payload.modalidad || "",
+    consent: payload.consent || "accepted",
+    consentimiento: payload.consentimiento || "accepted"
   };
 
   return {
@@ -149,6 +151,8 @@ const buildEnvelope = (moduleId, payload) => {
     participantId,
     timestamp,
     appVersion,
+    consent: compatibilityPayload.consent,
+    consentimiento: compatibilityPayload.consentimiento,
     payload: compatibilityPayload
   };
 };
