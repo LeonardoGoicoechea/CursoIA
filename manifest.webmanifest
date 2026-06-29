@@ -4,8 +4,8 @@
   "description": "Formulario PWA para registrarse a un curso de inteligencia artificial.",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#edf2f7",
-  "theme_color": "#102a43",
+  "background_color": "#050706",
+  "theme_color": "#0E1413",
   "icons": [
     {
       "src": "icons/icon-192.svg",
