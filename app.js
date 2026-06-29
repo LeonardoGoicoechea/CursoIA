@@ -101,6 +101,26 @@ const nextViewForModule = (moduleId) => {
   return index >= 0 ? MODULE_SEQUENCE[index + 1] : "";
 };
 
+const isModuleComplete = (state) =>
+  state?.status === "completed" && ["synced", "pending", "local"].includes(state?.syncStatus);
+
+const firstPendingView = () => {
+  const modules = readModules();
+  return MODULE_SEQUENCE.find((viewId) => {
+    if (viewId === "summary") return false;
+    return !isModuleComplete(modules[viewId]);
+  }) || "summary";
+};
+
+const isViewAvailable = (viewId) => {
+  if (viewId === "welcome") return true;
+  if (viewId === "summary") return firstPendingView() === "summary";
+  const pending = firstPendingView();
+  const viewIndex = MODULE_SEQUENCE.indexOf(viewId);
+  const pendingIndex = MODULE_SEQUENCE.indexOf(pending);
+  return viewIndex >= 0 && viewIndex <= pendingIndex;
+};
+
 const readModules = () => readJson(STORAGE_KEYS.modules, {});
 
 const writeModuleState = (moduleId, patch) => {
@@ -322,6 +342,9 @@ const saveModule = async (moduleId, payload) => {
 };
 
 const showView = (viewId) => {
+  if (!isViewAvailable(viewId)) {
+    viewId = firstPendingView();
+  }
   views.forEach((view) => {
     view.classList.toggle("active", view.dataset.moduleView === viewId);
   });
@@ -341,12 +364,19 @@ const goToView = (viewId) => {
 };
 
 const showContinueFor = (moduleId) => {
-  const nextView = nextViewForModule(moduleId);
+  const nextView = firstPendingView();
   if (!nextView) return;
   const form = document.querySelector(`.module-form[data-module="${moduleId}"]`);
   const button = form?.querySelector(".inline-continue-action");
   if (!button) return;
-  button.textContent = `Siguiente: ${viewLabel(nextView)}`;
+  if (nextView === "summary" && moduleId === "manifesto") {
+    button.textContent = "Ver cierre";
+  } else if (nextView === moduleId) {
+    button.hidden = true;
+    return;
+  } else {
+    button.textContent = `Siguiente: ${viewLabel(nextView)}`;
+  }
   button.dataset.target = nextView;
   button.hidden = false;
 };
@@ -410,6 +440,9 @@ const renderProgress = () => {
     const moduleId = link.dataset.target;
     const state = modules[moduleId];
     link.dataset.state = MODULES.some((item) => item.id === moduleId) ? stateLabel(state) : "";
+    const available = isViewAvailable(moduleId);
+    link.classList.toggle("locked", !available);
+    link.setAttribute("aria-disabled", String(!available));
   });
 
   renderSummary();
@@ -474,6 +507,10 @@ document.querySelectorAll(".module-form").forEach((form) => {
 navLinks.forEach((link) => {
   link.addEventListener("click", (event) => {
     event.preventDefault();
+    if (!isViewAvailable(link.dataset.target)) {
+      goToView(firstPendingView());
+      return;
+    }
     showView(link.dataset.target);
     history.replaceState(null, "", link.getAttribute("href"));
   });

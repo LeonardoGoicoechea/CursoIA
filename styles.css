@@ -234,6 +234,17 @@ h3 {
   background: rgba(0, 255, 136, 0.08);
 }
 
+.module-nav a.locked {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.module-nav a.locked:hover {
+  border-color: var(--line-soft);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.02);
+}
+
 .workspace {
   min-width: 0;
 }
