@@ -127,22 +127,30 @@ const buildEnvelope = (moduleId, payload) => {
   const participantId = getParticipantId();
   const timestamp = nowIso();
   const appVersion = CONFIG.appVersion || "1.0.0";
+  const storedProfile = readModules().profile?.payload || {};
+  const basePayload = moduleId === "profile" ? payload : storedProfile;
+  const acceptedConsent = payload.consent === true || basePayload.consent === true;
   const compatibilityPayload = {
+    ...basePayload,
     ...payload,
     submissionId,
     participantId,
     module: moduleId,
     timestamp,
     appVersion,
-    name: payload.fullName || payload.name || "",
-    mode: payload.participantType || payload.mode || "",
-    goal: payload.personalGoal || payload.goal || "",
-    level: payload.aiExperience || payload.level || "",
-    nivel: payload.aiExperience || payload.nivel || "",
-    modality: payload.participantType || payload.modality || "",
-    modalidad: payload.participantType || payload.modalidad || "",
-    consent: payload.consent === true,
-    consentimiento: payload.consent === true
+    fullName: payload.fullName || basePayload.fullName || payload.name || basePayload.name || "",
+    email: payload.email || basePayload.email || "",
+    phone: payload.phone || basePayload.phone || "",
+    age: payload.age || basePayload.age || "",
+    name: payload.fullName || basePayload.fullName || payload.name || basePayload.name || "",
+    mode: payload.participantType || payload.mode || basePayload.participantType || basePayload.mode || "",
+    goal: payload.personalGoal || payload.goal || basePayload.personalGoal || basePayload.goal || "",
+    level: payload.aiExperience || payload.level || basePayload.aiExperience || basePayload.level || "",
+    nivel: payload.aiExperience || payload.nivel || basePayload.aiExperience || basePayload.nivel || "",
+    modality: payload.participantType || payload.modality || basePayload.participantType || basePayload.modality || "",
+    modalidad: payload.participantType || payload.modalidad || basePayload.participantType || basePayload.modalidad || "",
+    consent: acceptedConsent,
+    consentimiento: acceptedConsent
   };
 
   return {
