@@ -100,9 +100,31 @@ const writeQueue = (queue) => {
   renderProgress();
 };
 
-const enqueue = (envelope) => {
+const compactQueue = (queue) => {
+  const modules = readModules();
+  const latestByModule = new Map();
+
+  queue.forEach((item) => {
+    if (!item?.module) return;
+    if (modules[item.module]?.syncStatus === "synced") return;
+    latestByModule.set(item.module, item);
+  });
+
+  return [...latestByModule.values()];
+};
+
+const refreshStoredQueue = () => {
   const queue = readQueue();
-  writeQueue([...queue.filter((item) => item.submissionId !== envelope.submissionId), envelope]);
+  const compacted = compactQueue(queue);
+  if (compacted.length !== queue.length) {
+    writeQueue(compacted);
+  }
+  return compacted;
+};
+
+const enqueue = (envelope) => {
+  const queue = compactQueue(readQueue());
+  writeQueue([...queue.filter((item) => item.module !== envelope.module), envelope]);
   writeModuleState(envelope.module, { status: "completed", syncStatus: "pending" });
 };
 
@@ -165,6 +187,16 @@ const buildEnvelope = (moduleId, payload) => {
   };
 };
 
+const prepareQueuedEnvelope = (envelope) => {
+  const modulePayload = readModules()[envelope.module]?.payload || envelope.payload || {};
+  const rebuilt = buildEnvelope(envelope.module, modulePayload);
+  return {
+    ...rebuilt,
+    submissionId: envelope.submissionId || rebuilt.submissionId,
+    timestamp: envelope.timestamp || rebuilt.timestamp
+  };
+};
+
 const validateForm = (form) => {
   if (!form.reportValidity()) return false;
   return true;
@@ -204,13 +236,15 @@ const sendEnvelope = async (envelope) => {
 
 const syncQueue = async () => {
   if (syncing || !navigator.onLine || !endpointConfigured()) return;
-  const queue = readQueue();
+  const queue = refreshStoredQueue().map(prepareQueuedEnvelope);
   if (queue.length === 0) return;
 
   syncing = true;
   const remaining = [];
 
   for (const item of queue) {
+    if (readModules()[item.module]?.syncStatus === "synced") continue;
+
     try {
       await sendEnvelope(item);
       writeModuleState(item.module, {
@@ -229,7 +263,7 @@ const syncQueue = async () => {
   if (remaining.length === 0) {
     setStatus("Registros pendientes sincronizados.", "success");
   } else {
-    setStatus(`Quedan ${remaining.length} registros pendientes.`, "warning");
+    setStatus(`Quedan ${remaining.length} envios pendientes de sincronizar.`, "warning");
   }
 };
 
@@ -429,6 +463,7 @@ if ("serviceWorker" in navigator) {
 getParticipantId();
 renderCaptureCopy();
 hydrateForms();
+refreshStoredQueue();
 renderProgress();
 
 const initialHash = window.location.hash.replace("#", "");
