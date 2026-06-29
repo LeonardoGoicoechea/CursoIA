@@ -136,7 +136,11 @@ const buildEnvelope = (moduleId, payload) => {
     appVersion,
     name: payload.fullName || payload.name || "",
     mode: payload.participantType || payload.mode || "",
-    goal: payload.personalGoal || payload.goal || ""
+    goal: payload.personalGoal || payload.goal || "",
+    level: payload.aiExperience || payload.level || "",
+    nivel: payload.aiExperience || payload.nivel || "",
+    modality: payload.participantType || payload.modality || "",
+    modalidad: payload.participantType || payload.modalidad || ""
   };
 
   return {
