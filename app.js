@@ -110,7 +110,7 @@ const formToPayload = (form) => {
   const payload = {};
   const formData = new FormData(form);
   for (const [key, value] of formData.entries()) {
-    payload[key] = String(value).trim();
+    payload[key] = value === "true" ? true : String(value).trim();
   }
   return payload;
 };
@@ -141,8 +141,8 @@ const buildEnvelope = (moduleId, payload) => {
     nivel: payload.aiExperience || payload.nivel || "",
     modality: payload.participantType || payload.modality || "",
     modalidad: payload.participantType || payload.modalidad || "",
-    consent: true,
-    consentimiento: true
+    consent: payload.consent === true,
+    consentimiento: payload.consent === true
   };
 
   return {

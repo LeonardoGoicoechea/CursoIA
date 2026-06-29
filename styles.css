@@ -304,6 +304,23 @@ label {
   font-weight: 800;
 }
 
+.checkbox-row {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #d8ddd8;
+  border-radius: 8px;
+  background: #fbfcfa;
+}
+
+.checkbox-row input {
+  width: 18px;
+  height: 18px;
+  margin-top: 3px;
+  accent-color: var(--teal);
+}
+
 input,
 select,
 textarea {
