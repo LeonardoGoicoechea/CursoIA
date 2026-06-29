@@ -122,14 +122,32 @@ const fillForm = (form, payload = {}) => {
   });
 };
 
-const buildEnvelope = (moduleId, payload) => ({
-  submissionId: createId(),
-  module: moduleId,
-  participantId: getParticipantId(),
-  timestamp: nowIso(),
-  appVersion: CONFIG.appVersion || "1.0.0",
-  payload
-});
+const buildEnvelope = (moduleId, payload) => {
+  const submissionId = createId();
+  const participantId = getParticipantId();
+  const timestamp = nowIso();
+  const appVersion = CONFIG.appVersion || "1.0.0";
+  const compatibilityPayload = {
+    ...payload,
+    submissionId,
+    participantId,
+    module: moduleId,
+    timestamp,
+    appVersion,
+    name: payload.fullName || payload.name || "",
+    mode: payload.participantType || payload.mode || "",
+    goal: payload.personalGoal || payload.goal || ""
+  };
+
+  return {
+    submissionId,
+    module: moduleId,
+    participantId,
+    timestamp,
+    appVersion,
+    payload: compatibilityPayload
+  };
+};
 
 const validateForm = (form) => {
   if (!form.reportValidity()) return false;
