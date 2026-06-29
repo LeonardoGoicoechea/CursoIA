@@ -29,7 +29,6 @@ const STORAGE_KEYS = {
 };
 
 const statusEl = document.querySelector("#status");
-const continueButton = document.querySelector("#continueButton");
 const progressCountEl = document.querySelector("#progressCount");
 const summaryListEl = document.querySelector("#summaryList");
 const installButton = document.querySelector("#installButton");
@@ -329,7 +328,7 @@ const showView = (viewId) => {
   navLinks.forEach((link) => {
     link.classList.toggle("active", link.dataset.target === viewId);
   });
-  if (continueButton) continueButton.hidden = true;
+  hideContinueButtons();
   renderSummary();
 };
 
@@ -343,10 +342,41 @@ const goToView = (viewId) => {
 
 const showContinueFor = (moduleId) => {
   const nextView = nextViewForModule(moduleId);
-  if (!continueButton || !nextView) return;
-  continueButton.textContent = `Continuar con ${viewLabel(nextView)}`;
-  continueButton.dataset.target = nextView;
-  continueButton.hidden = false;
+  if (!nextView) return;
+  const form = document.querySelector(`.module-form[data-module="${moduleId}"]`);
+  const button = form?.querySelector(".inline-continue-action");
+  if (!button) return;
+  button.textContent = `Siguiente: ${viewLabel(nextView)}`;
+  button.dataset.target = nextView;
+  button.hidden = false;
+};
+
+const hideContinueButtons = () => {
+  document.querySelectorAll(".inline-continue-action").forEach((button) => {
+    button.hidden = true;
+  });
+};
+
+const prepareInlineContinueButtons = () => {
+  document.querySelectorAll(".module-form").forEach((form) => {
+    const submitButton = form.querySelector("button[type='submit']");
+    if (!submitButton || form.querySelector(".inline-continue-action")) return;
+
+    const row = document.createElement("div");
+    row.className = "form-submit-row";
+    submitButton.before(row);
+    row.append(submitButton);
+
+    const continueAction = document.createElement("button");
+    continueAction.className = "continue-action inline-continue-action";
+    continueAction.type = "button";
+    continueAction.hidden = true;
+    continueAction.textContent = "Siguiente";
+    continueAction.addEventListener("click", () => {
+      if (continueAction.dataset.target) goToView(continueAction.dataset.target);
+    });
+    row.append(continueAction);
+  });
 };
 
 const renderCaptureCopy = () => {
@@ -453,10 +483,6 @@ document.querySelectorAll("[data-jump]").forEach((button) => {
   button.addEventListener("click", () => showView(button.dataset.jump));
 });
 
-continueButton?.addEventListener("click", () => {
-  if (continueButton.dataset.target) goToView(continueButton.dataset.target);
-});
-
 document.querySelectorAll("[data-audience]").forEach((button) => {
   button.addEventListener("click", () => {
     localStorage.setItem(STORAGE_KEYS.audience, button.dataset.audience);
@@ -505,6 +531,7 @@ if ("serviceWorker" in navigator) {
 }
 
 getParticipantId();
+prepareInlineContinueButtons();
 renderCaptureCopy();
 hydrateForms();
 refreshStoredQueue();
