@@ -469,3 +469,109 @@ renderProgress();
 const initialHash = window.location.hash.replace("#", "");
 const initialView = views.find((view) => view.id === initialHash)?.dataset.moduleView || "welcome";
 showView(initialView);
+
+const WORKSHOP_VIEW_SEQUENCE = [
+  "welcome",
+  "profile",
+  "thermometer1",
+  "thermometer2",
+  "case",
+  "flow",
+  "experiment",
+  "manifesto",
+  "summary"
+];
+
+const viewLabel = (viewId) => {
+  const link = navLinks.find((item) => item.dataset.target === viewId);
+  return link ? link.textContent.trim() : "etapa";
+};
+
+const activeViewId = () =>
+  document.querySelector(".module.active")?.dataset.moduleView || "welcome";
+
+const goToStage = (viewId) => {
+  const link = navLinks.find((item) => item.dataset.target === viewId);
+  if (!link) return;
+  link.click();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
+
+const goToRelativeStage = (step) => {
+  const current = activeViewId();
+  const index = WORKSHOP_VIEW_SEQUENCE.indexOf(current);
+  const target = WORKSHOP_VIEW_SEQUENCE[index + step];
+  if (target) goToStage(target);
+};
+
+const updateStageControls = () => {
+  const current = activeViewId();
+  const index = WORKSHOP_VIEW_SEQUENCE.indexOf(current);
+  const previous = WORKSHOP_VIEW_SEQUENCE[index - 1];
+  const next = WORKSHOP_VIEW_SEQUENCE[index + 1];
+
+  document.querySelectorAll("[data-stage-prev]").forEach((button) => {
+    button.disabled = !previous;
+    button.textContent = previous ? `Anterior: ${viewLabel(previous)}` : "Primera etapa";
+  });
+
+  document.querySelectorAll("[data-stage-next]").forEach((button) => {
+    button.disabled = !next;
+    button.textContent = next ? `Siguiente: ${viewLabel(next)}` : "Recorrido completo";
+  });
+};
+
+const buildStageControls = () => {
+  views.forEach((view) => {
+    if (view.querySelector(".stage-actions")) return;
+    const actions = document.createElement("div");
+    actions.className = "stage-actions";
+    actions.innerHTML = `
+      <button class="secondary-action" type="button" data-stage-prev>Anterior</button>
+      <button class="primary-action" type="button" data-stage-next>Siguiente</button>
+    `;
+    view.append(actions);
+  });
+
+  if (!document.querySelector(".mobile-stage-bar")) {
+    const bar = document.createElement("div");
+    bar.className = "mobile-stage-bar";
+    bar.innerHTML = `
+      <button type="button" data-stage-prev>Anterior</button>
+      <button type="button" data-stage-menu>Etapas</button>
+      <button type="button" data-stage-next>Siguiente</button>
+    `;
+    document.body.append(bar);
+  }
+
+  document.querySelectorAll("[data-stage-prev]").forEach((button) => {
+    button.addEventListener("click", () => goToRelativeStage(-1));
+  });
+
+  document.querySelectorAll("[data-stage-next]").forEach((button) => {
+    button.addEventListener("click", () => goToRelativeStage(1));
+  });
+
+  document.querySelectorAll("[data-stage-menu]").forEach((button) => {
+    button.addEventListener("click", () => {
+      document.querySelector(".progress-panel")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+    });
+  });
+};
+
+const stageObserver = new MutationObserver(updateStageControls);
+views.forEach((view) => {
+  stageObserver.observe(view, { attributes: true, attributeFilter: ["class"] });
+});
+
+document.querySelectorAll(".module-form").forEach((form) => {
+  form.addEventListener("submit", () => {
+    window.setTimeout(updateStageControls, 700);
+  });
+});
+
+buildStageControls();
+updateStageControls();

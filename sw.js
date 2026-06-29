@@ -1,4 +1,4 @@
-const CACHE_NAME = "cursoia-v1.0.9";
+const CACHE_NAME = "cursoia-v1.1.0";
 const ASSETS = [
   "./",
   "./index.html",
