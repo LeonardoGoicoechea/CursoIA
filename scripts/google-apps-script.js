@@ -1,131 +1,155 @@
-const SHEET_NAME = "Inscripciones";
 const SPREADSHEET_ID = "1k39LOb5AsCdHGCTDG6ho4KC_zyuMRtr43gAup2GCRpw";
-const HEADERS = [
-  "submissionId",
-  "createdAt",
-  "fullName",
-  "email",
-  "phone",
-  "age",
-  "level",
-  "mode",
-  "goal",
-  "consent",
-  "source",
-  "receivedAt"
-];
+const EXPECTED_TOKEN = "";
+
+const MODULES = {
+  profile: {
+    sheet: "Perfiles",
+    fields: [
+      "fullName",
+      "email",
+      "phone",
+      "age",
+      "role",
+      "industry",
+      "aiExperience",
+      "participantType",
+      "personalGoal"
+    ]
+  },
+  thermometer1: {
+    sheet: "Termometro1",
+    fields: ["repetitiveTasks", "frequency", "weeklyTime", "energyDrain", "delegationRisk", "humanCriteria"]
+  },
+  thermometer2: {
+    sheet: "Termometro2",
+    fields: ["fearLagging", "fearBadDelegation", "overload", "experimentConfidence", "opportunity"]
+  },
+  case: {
+    sheet: "CasosReales",
+    fields: ["realProblem", "context", "currentInput", "expectedOutput", "aiAssistance", "humanDecision", "aiBoundary", "risks"]
+  },
+  flow: {
+    sheet: "Flujos",
+    fields: ["currentFlow", "newFlow", "delegatedStep", "supervisedStep", "preservedStep", "improvementMetric"]
+  },
+  experiment: {
+    sheet: "Experimentos",
+    fields: ["testedAction", "toolUsed", "timeBefore", "timeAfter", "result", "humanCorrections", "learning", "nextAdjustment"]
+  },
+  manifesto: {
+    sheet: "Manifiestos",
+    fields: ["willDelegate", "willPreserve", "ethicalLimit", "verificationPractice", "thirtyDayCommitment", "signature"]
+  },
+  event: {
+    sheet: "Eventos",
+    fields: ["type", "message", "details"]
+  }
+};
+
+const BASE_HEADERS = ["savedAt", "timestamp", "submissionId", "participantId", "module", "appVersion"];
 
 function doGet() {
   return jsonResponse({
     ok: true,
-    service: "course-registration",
-    timestamp: new Date().toISOString()
+    service: "CursoIA",
+    modules: Object.keys(MODULES)
   });
 }
 
 function doPost(event) {
+  const savedAt = new Date().toISOString();
+  const lock = LockService.getScriptLock();
+
   try {
-    const body = parseBody(event);
-    verifyToken(body.token);
-
-    const payload = body.payload || {};
-    validatePayload(payload);
-
-    const lock = LockService.getScriptLock();
     lock.waitLock(10000);
+    const data = parseRequest(event);
+    validateToken(data);
+    const moduleConfig = validateModule(data);
+    const sheet = getSheet(moduleConfig.sheet);
+    ensureHeaders(sheet, moduleConfig.fields);
+    sheet.appendRow(buildRow(data, moduleConfig.fields, savedAt));
 
-    try {
-      const sheet = getSheet();
-      ensureHeaders(sheet);
-
-      if (alreadySaved(sheet, payload.submissionId)) {
-        return jsonResponse({ ok: true, duplicate: true, submissionId: payload.submissionId });
-      }
-
-      const nextRow = nextWritableRow(sheet);
-      sheet.getRange(nextRow, 1, 1, HEADERS.length).setValues([toRow(payload)]);
-      return jsonResponse({ ok: true, duplicate: false, submissionId: payload.submissionId });
-    } finally {
-      lock.releaseLock();
-    }
+    return jsonResponse({
+      ok: true,
+      module: data.module,
+      savedAt
+    });
   } catch (error) {
-    return jsonResponse({ ok: false, error: String(error.message || error) });
+    return jsonResponse({
+      ok: false,
+      module: "",
+      savedAt,
+      error: error.message || String(error)
+    });
+  } finally {
+    try {
+      lock.releaseLock();
+    } catch (error) {
+      // Lock may not have been acquired if parsing failed very early.
+    }
   }
 }
 
-function parseBody(event) {
+function parseRequest(event) {
   if (!event || !event.postData || !event.postData.contents) {
-    throw new Error("Request vacio.");
+    throw new Error("Payload vacio.");
   }
-  return JSON.parse(event.postData.contents);
+
+  try {
+    return JSON.parse(event.postData.contents);
+  } catch (error) {
+    throw new Error("Payload JSON invalido.");
+  }
 }
 
-function verifyToken(token) {
-  const expected = PropertiesService.getScriptProperties().getProperty("API_TOKEN");
-  if (expected && token !== expected) {
+function validateToken(data) {
+  if (!EXPECTED_TOKEN) return;
+  if (data.token !== EXPECTED_TOKEN) {
     throw new Error("Token invalido.");
   }
 }
 
-function validatePayload(payload) {
-  if (!payload.submissionId) throw new Error("Falta submissionId.");
-  if (!payload.fullName || String(payload.fullName).trim().length < 3) throw new Error("Nombre invalido.");
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(payload.email || ""))) throw new Error("Email invalido.");
-  if (!payload.phone) throw new Error("Telefono requerido.");
-  const age = Number(payload.age);
-  if (!Number.isInteger(age) || age < 13 || age > 99) throw new Error("Edad invalida.");
-  if (!payload.level || !payload.mode) throw new Error("Nivel y modalidad requeridos.");
-  if (!payload.goal || String(payload.goal).trim().length < 8) throw new Error("Objetivo requerido.");
-  if (payload.consent !== true) throw new Error("Consentimiento requerido.");
+function validateModule(data) {
+  if (!data.module || !MODULES[data.module]) {
+    throw new Error("Modulo desconocido.");
+  }
+  if (!data.payload || typeof data.payload !== "object") {
+    throw new Error("Payload de modulo vacio.");
+  }
+  if (!data.submissionId || !data.participantId) {
+    throw new Error("Faltan identificadores.");
+  }
+  return MODULES[data.module];
 }
 
-function getSheet() {
+function getSheet(sheetName) {
   const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
-  return spreadsheet.getSheetByName(SHEET_NAME) || spreadsheet.insertSheet(SHEET_NAME);
+  return spreadsheet.getSheetByName(sheetName) || spreadsheet.insertSheet(sheetName);
 }
 
-function ensureHeaders(sheet) {
-  const current = sheet.getRange(1, 1, 1, HEADERS.length).getValues()[0];
-  const needsHeaders = HEADERS.some((header, index) => current[index] !== header);
+function ensureHeaders(sheet, fields) {
+  const headers = BASE_HEADERS.concat(fields, ["payloadJson"]);
+  const existing = sheet.getLastRow() > 0
+    ? sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), headers.length)).getValues()[0]
+    : [];
+
+  const needsHeaders = existing.filter(String).length === 0;
   if (needsHeaders) {
-    sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
     sheet.setFrozenRows(1);
+    return;
+  }
+
+  if (headers.some((header, index) => existing[index] !== header)) {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
   }
 }
 
-function alreadySaved(sheet, submissionId) {
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) return false;
-  const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
-  return ids.includes(submissionId);
-}
-
-function nextWritableRow(sheet) {
-  const lastRow = Math.max(sheet.getLastRow(), 2);
-  const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
-  const firstBlankIndex = ids.findIndex((value) => !value);
-  return firstBlankIndex === -1 ? lastRow + 1 : firstBlankIndex + 2;
-}
-
-function toRow(payload) {
-  return [
-    payload.submissionId,
-    payload.createdAt,
-    payload.fullName,
-    payload.email,
-    textValue(payload.phone),
-    Number(payload.age),
-    payload.level,
-    payload.mode,
-    payload.goal,
-    payload.consent === true,
-    payload.source || "pwa",
-    new Date().toISOString()
-  ];
-}
-
-function textValue(value) {
-  return "'" + String(value || "");
+function buildRow(data, fields, savedAt) {
+  const payload = data.payload || {};
+  return BASE_HEADERS.map((header) => data[header] || (header === "savedAt" ? savedAt : ""))
+    .concat(fields.map((field) => payload[field] || ""))
+    .concat([JSON.stringify(payload)]);
 }
 
 function jsonResponse(data) {

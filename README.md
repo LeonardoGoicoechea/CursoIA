@@ -1,266 +1,139 @@
-# CursoIA - Registro al curso
+# CursoIA - PWA del taller
 
-Aplicacion web estatica para registrar personas interesadas en el curso y enviar los datos a Google Sheets mediante Google Apps Script.
+CursoIA es una PWA estatica para acompanar el taller **Trabajar con IA sin perder lo humano**. No es solo un formulario de inscripcion: funciona como bitacora del alumno durante los 3 encuentros.
 
-La app funciona como PWA: puede instalarse en el dispositivo y guarda registros localmente si no hay conexion o si el envio falla. Cuando vuelve la conexion, intenta sincronizar los registros pendientes.
+La app guarda avances en el dispositivo, funciona offline despues del primer acceso y sincroniza cada modulo con Google Sheets mediante Google Apps Script.
+
+## Recorrido
+
+1. **Bienvenida / captacion**: adapta el mensaje para lideres o profesionales.
+2. **Registro y perfil**: datos base, rol, rubro, experiencia con IA y objetivo.
+3. **Termometro 1**: auto-observacion de tareas repetitivas, energia, tiempo y criterio humano.
+4. **Termometro 2**: FOMO/FOBO, sobrecarga, confianza y oportunidad concreta.
+5. **Caso real**: problema laboral acotado para experimentar.
+6. **Flujo IA + humano**: que delegar, que supervisar y que preservar.
+7. **Experimento semanal**: evidencia de uso real entre encuentros.
+8. **Manifiesto**: compromiso final de criterio humano.
+9. **Cierre**: avance local y estado de sincronizacion.
 
 ## Archivos principales
 
-- `index.html`: estructura visual y formulario.
-- `styles.css`: estilos de la interfaz.
-- `app.js`: validacion, envio, cola local, instalacion PWA y sincronizacion.
-- `config.js`: configuracion del endpoint de Google Apps Script.
-- `sw.js`: service worker para cache offline.
-- `manifest.webmanifest`: datos de instalacion de la PWA.
-- `icons/`: iconos usados por la app instalable.
-- `scripts/google-apps-script.js`: backend para pegar en Google Apps Script.
-- `docs/google-sheets.md`: guia especifica de integracion con Google Sheets.
-- `docs/operating.md`: notas operativas internas del flujo de trabajo.
-
-## Requisitos
-
-- Python 3 instalado, solo para servir la app localmente.
-- Navegador moderno: Chrome, Edge, Firefox o Safari.
-- Una hoja de Google Sheets.
-- Un despliegue de Google Apps Script publicado como Web App.
-
-No requiere instalar dependencias de Node ni compilar.
+- `index.html`: estructura de la PWA y formularios del recorrido.
+- `styles.css`: interfaz responsive.
+- `app.js`: navegacion, guardado local, cola offline y sincronizacion.
+- `config.js`: URL publica de Google Apps Script y version de app.
+- `sw.js`: service worker y cache offline.
+- `manifest.webmanifest`: metadatos de instalacion.
+- `scripts/google-apps-script.js`: backend para Google Sheets.
+- `docs/google-sheets.md`: guia de integracion con Sheets.
 
 ## Ejecutar localmente
-
-Desde PowerShell:
 
 ```powershell
 cd "C:\Users\goico\OneDrive\Documentos\CursoIA"
 python -m http.server 8000 --bind 127.0.0.1
 ```
 
-Luego abrir:
+Abrir:
 
 ```text
 http://127.0.0.1:8000/
 ```
 
-No conviene abrir `index.html` con doble clic. Para que el service worker y el modo offline funcionen, la app debe servirse desde `localhost`, `127.0.0.1` o `https`.
+No abrir `index.html` con doble clic. El modo offline/PWA requiere `localhost`, `127.0.0.1` o `https`.
 
 ## Configuracion
 
-La configuracion esta en `config.js`:
+Editar `config.js`:
 
 ```js
 window.COURSE_REGISTRATION_CONFIG = {
   googleAppsScriptUrl: "https://script.google.com/macros/s/DEPLOYMENT_ID/exec",
   apiToken: "",
-  requestTimeoutMs: 12000
+  requestTimeoutMs: 12000,
+  appVersion: "1.0.0",
+  releaseDates: {}
 };
 ```
 
-Campos:
+- `googleAppsScriptUrl`: URL `/exec` del despliegue Web App.
+- `apiToken`: token opcional. Si se usa, debe coincidir con `EXPECTED_TOKEN` en Apps Script.
+- `requestTimeoutMs`: espera maxima de cada envio.
+- `appVersion`: version enviada en cada payload.
+- `releaseDates`: reservado para liberar modulos por fecha en una version futura.
 
-- `googleAppsScriptUrl`: URL del despliegue Web App de Google Apps Script.
-- `apiToken`: token opcional. Si se usa, debe coincidir con el valor esperado por el Apps Script.
-- `requestTimeoutMs`: tiempo maximo de espera antes de considerar fallido el envio.
+## Datos enviados
 
-Si `googleAppsScriptUrl` esta vacio o mal escrito, la app seguira funcionando, pero los registros quedaran guardados localmente y no llegaran a Google Sheets.
+Cada modulo envia un sobre comun:
 
-## Configurar Google Sheets
-
-1. Crear o abrir una hoja de Google Sheets.
-2. Copiar el ID de la hoja desde la URL.
-3. Abrir Google Apps Script desde la hoja.
-4. Pegar el contenido de `scripts/google-apps-script.js`.
-5. Ajustar `SPREADSHEET_ID` y, si corresponde, `SHEET_NAME`.
-6. Guardar el proyecto.
-7. Desplegar como Web App.
-8. Copiar la URL `/exec`.
-9. Pegar esa URL en `config.js`, en `googleAppsScriptUrl`.
-
-Configuracion recomendada del despliegue:
-
-- Ejecutar como: propietario del script.
-- Acceso: cualquier usuario con el enlace, salvo que se requiera otro esquema de seguridad.
-
-Despues de cambiar el Apps Script, crear un nuevo despliegue o actualizar el despliegue existente. Si se usa una URL vieja, la app puede seguir apuntando a una version anterior del backend.
-
-## Flujo de registro
-
-1. El usuario completa el formulario.
-2. `app.js` valida los campos.
-3. La app crea un registro con identificador unico.
-4. Intenta enviar el registro al endpoint de Google Apps Script.
-5. Si el envio funciona, muestra confirmacion.
-6. Si el envio falla o no hay internet, guarda el registro en `localStorage`.
-7. Cuando vuelve la conexion, intenta sincronizar la cola pendiente.
-
-La cola local usa `localStorage`, por lo que queda guardada en el navegador de ese dispositivo. Si se borra el almacenamiento del navegador, se pierden los registros pendientes no sincronizados.
-
-## Modo offline
-
-El modo offline depende de `sw.js`, que registra un service worker y cachea los archivos basicos de la app:
-
-- `index.html`
-- `styles.css`
-- `app.js`
-- `config.js`
-- `manifest.webmanifest`
-- iconos
-
-Si aparece el mensaje:
-
-```text
-La app funciona, pero no se pudo activar el modo offline.
+```json
+{
+  "submissionId": "id unico",
+  "module": "profile",
+  "participantId": "id persistente del dispositivo",
+  "timestamp": "fecha ISO",
+  "appVersion": "1.0.0",
+  "payload": {}
+}
 ```
 
-significa que la interfaz puede usarse, pero el navegador no pudo registrar el service worker. Causas comunes:
+Si no hay conexion o falla el endpoint, el sobre queda en `localStorage` y se reintenta al volver online.
 
-- La app fue abierta con doble clic como archivo local.
-- La app no esta en `localhost`, `127.0.0.1` o `https`.
-- El navegador bloqueo el service worker.
-- `sw.js` tiene error o no puede cargarse.
-- Alguno de los archivos listados en cache no existe o devuelve error.
+## Google Sheets
 
-Para probar offline:
+El Apps Script crea y usa estas pestanas:
 
-1. Abrir la app desde `http://127.0.0.1:8000/`.
-2. Recargar una vez la pagina.
-3. Abrir DevTools del navegador.
-4. Revisar Application > Service Workers.
-5. Activar modo offline o cortar internet.
-6. Recargar la app.
+- `Perfiles`
+- `Termometro1`
+- `Termometro2`
+- `CasosReales`
+- `Flujos`
+- `Experimentos`
+- `Manifiestos`
+- `Eventos`
 
-El primer uso requiere conexion para que el navegador descargue y guarde los archivos. Offline no significa que el primer acceso funcione sin internet.
+Pegar `scripts/google-apps-script.js` en Google Apps Script, ajustar `SPREADSHEET_ID`, desplegar como Web App y copiar la URL `/exec` en `config.js`.
 
-## Instalacion como app
+## Privacidad
 
-En navegadores compatibles, la app puede instalarse desde el boton visible o desde el menu del navegador.
+La app muestra un aviso minimo:
 
-Condiciones habituales:
+```text
+No ingreses nombres reales de clientes, pacientes, empleados ni informacion confidencial. Usa ejemplos anonimizados.
+```
 
-- Debe servirse desde `localhost` o `https`.
-- Debe existir `manifest.webmanifest`.
-- Deben existir los iconos declarados.
-- El service worker debe registrarse correctamente.
+No hay login ni cifrado local en esta version. No debe usarse para recolectar datos sensibles.
 
-En iPhone/iPad, la instalacion suele hacerse desde Safari con "Agregar a pantalla de inicio".
+## Verificacion
+
+1. Ejecutar localmente desde `127.0.0.1`.
+2. Completar perfil online y confirmar fila en `Perfiles`.
+3. Completar cada modulo y confirmar su pestana.
+4. Cortar internet, completar un modulo y revisar que quede pendiente.
+5. Reconectar y confirmar sincronizacion.
+6. Recargar y confirmar que el progreso local persiste.
+7. Abrir DevTools > Application y confirmar service worker activo.
+8. Publicar en GitHub Pages y confirmar `index.html`, `sw.js`, `manifest.webmanifest` e iconos.
 
 ## Publicacion
 
-La app puede publicarse en cualquier hosting estatico:
-
-- GitHub Pages
-- Netlify
-- Vercel
-- Cloudflare Pages
-- servidor propio con HTTPS
-
-Archivos a publicar:
-
-- `index.html`
-- `styles.css`
-- `app.js`
-- `config.js`
-- `manifest.webmanifest`
-- `sw.js`
-- `icons/`
-
-No publicar archivos internos si no son necesarios para el usuario final:
-
-- `.agents/`
-- `.codex/`
-- `.serena/`
-- `.git/`
-
-Antes de publicar, confirmar que `config.js` apunte al Apps Script correcto.
-
-## Seguridad
-
-Esta app es estatica: cualquier dato dentro de `config.js` puede ser visto por quien abra la pagina.
-
-No colocar secretos privados reales en `config.js`. Si se usa `apiToken`, debe tratarse como una barrera simple, no como seguridad fuerte.
-
-Para mayor seguridad:
-
-- Validar datos tambien en Google Apps Script.
-- Limitar permisos de la hoja.
-- Registrar timestamp e identificador de envio.
-- Evitar guardar datos sensibles innecesarios.
-- Revisar periodicamente los despliegues activos de Apps Script.
-
-## Diagnostico rapido
-
-### La app no abre
-
-- Confirmar que el servidor local este activo.
-- Abrir `http://127.0.0.1:8000/`.
-- Verificar que `index.html` exista.
-
-### El formulario no envia
-
-- Revisar `config.js`.
-- Confirmar que `googleAppsScriptUrl` termine en `/exec`.
-- Probar que el despliegue de Apps Script este activo.
-- Revisar permisos del Web App.
-- Abrir la consola del navegador para ver errores.
-
-### No llegan datos a Google Sheets
-
-- Confirmar `SPREADSHEET_ID` en `scripts/google-apps-script.js`.
-- Confirmar nombre de hoja si el script usa `SHEET_NAME`.
-- Revisar ejecuciones en Google Apps Script.
-- Confirmar que el despliegue actualizado sea el que esta en `config.js`.
-
-### Quedan registros pendientes
-
-- Puede ser normal si no hay internet o si Apps Script falla.
-- La app intentara sincronizar al volver la conexion.
-- No borrar datos del navegador hasta confirmar que la cola se sincronizo.
-
-### No se activa el modo offline
-
-- Ejecutar desde `http://127.0.0.1:8000/`, no desde archivo local.
-- Confirmar que `sw.js` exista.
-- Confirmar que todos los archivos de `sw.js` existan.
-- Recargar la pagina despues del primer acceso.
-- Revisar Application > Service Workers en DevTools.
-
-## Verificacion antes de usar en produccion
-
-1. Abrir la app desde servidor local o HTTPS.
-2. Enviar un registro de prueba con conexion.
-3. Confirmar que aparece en Google Sheets.
-4. Desconectar internet.
-5. Enviar otro registro.
-6. Confirmar que queda guardado localmente.
-7. Reconectar internet.
-8. Confirmar que se sincroniza.
-9. Instalar la app como PWA.
-10. Abrir la app instalada y repetir una prueba simple.
-
-## Comandos utiles
-
-Ejecutar app local:
-
-```powershell
-cd "C:\Users\goico\OneDrive\Documentos\CursoIA"
-python -m http.server 8000 --bind 127.0.0.1
-```
-
-Abrir en navegador:
+Repositorio:
 
 ```text
-http://127.0.0.1:8000/
+https://github.com/LeonardoGoicoechea/CursoIA
 ```
 
-Detener el servidor:
+GitHub Pages:
 
 ```text
-Ctrl + C
+https://leonardogoicoechea.github.io/CursoIA/
 ```
 
-## Notas de mantenimiento
+Publicar desde rama `main`, carpeta raiz.
 
-- Si se agregan archivos criticos, revisar `sw.js` para incluirlos en cache.
-- Si se cambia el nombre de iconos, actualizar `manifest.webmanifest` y `sw.js`.
-- Si cambia el backend, actualizar `config.js`.
-- Si se cambia el esquema de datos, actualizar tambien Google Apps Script y la hoja.
-- Probar siempre online y offline despues de cambios en `app.js`, `config.js` o `sw.js`.
+## Mantenimiento
+
+- Si cambia un campo de formulario, actualizar tambien `scripts/google-apps-script.js` y `docs/google-sheets.md`.
+- Si se agregan assets, actualizar `sw.js`.
+- Si cambia la URL de Apps Script, actualizar `config.js`.
+- Si se cambia `sw.js`, subir version de `CACHE_NAME` para forzar cache nuevo.

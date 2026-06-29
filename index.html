@@ -4,90 +4,333 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#102a43">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="CursoIA">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <title>CursoIA</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="CursoIA">
     <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icons/icon-192.svg">
+    <link rel="icon" href="icons/icon-192.svg">
     <link rel="stylesheet" href="styles.css">
+    <title>CursoIA</title>
   </head>
   <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Trabajar con IA sin perder lo humano</p>
+        <h1>CursoIA</h1>
+        <p class="lead">Bitacora guiada para observar tareas reales, disenar experimentos seguros y cerrar el taller con criterio humano documentado.</p>
+      </div>
+      <button class="install-button" id="installButton" type="button" hidden>Instalar app</button>
+    </header>
+
     <main class="app-shell">
-      <section class="program-panel" aria-labelledby="page-title">
-        <p class="eyebrow">Programa IA aplicada</p>
-        <h1 id="page-title">Registro al curso</h1>
-        <p class="summary">Reservá tu lugar y ayudanos a ubicarte en el grupo correcto según tu experiencia.</p>
-
-        <div class="program-note" aria-label="Datos del curso">
-          <span>Inicio próximo</span>
-          <strong>Agosto 2026</strong>
+      <aside class="progress-panel" aria-label="Recorrido del taller">
+        <div class="progress-summary">
+          <span id="progressCount">0/7</span>
+          <strong>avance guardado</strong>
         </div>
-      </section>
-<section class="install-panel" id="installPanel" aria-label="Instalar aplicacion" hidden>
-  <div>
-    <p class="install-title">Instalar app</p>
-    <p class="install-copy" id="installCopy">Agrega este registro a tu dispositivo para usarlo sin buscar el enlace.</p>
-  </div>
-  <button class="install-button" id="installButton" type="button">Instalar</button>
-</section>
-<section class="form-panel" aria-label="Formulario de registro">
-        <form class="registration-form" id="registrationForm">
-          <div class="field-grid">
-            <label>
-              Nombre completo
-              <input name="fullName" autocomplete="name" required minlength="3" placeholder="Ej. Ana Martinez">
-            </label>
+        <nav class="module-nav" id="moduleNav">
+          <a href="#bienvenida" data-target="welcome">Bienvenida</a>
+          <a href="#perfil" data-target="profile">Perfil</a>
+          <a href="#termometro1" data-target="thermometer1">Termometro 1</a>
+          <a href="#termometro2" data-target="thermometer2">Termometro 2</a>
+          <a href="#caso-real" data-target="case">Caso real</a>
+          <a href="#flujo" data-target="flow">Flujo IA + humano</a>
+          <a href="#experimento" data-target="experiment">Experimento</a>
+          <a href="#manifiesto" data-target="manifesto">Manifiesto</a>
+          <a href="#cierre" data-target="summary">Cierre</a>
+        </nav>
+        <p class="privacy-note">No ingreses nombres reales de clientes, pacientes, empleados ni informacion confidencial. Usa ejemplos anonimizados.</p>
+      </aside>
 
-            <label>
-              Correo electrónico
-              <input name="email" type="email" autocomplete="email" required placeholder="ana@email.com">
-            </label>
+      <section class="workspace">
+        <p class="status" id="status" role="status" aria-live="polite">Listo para trabajar. Los avances se guardan en este dispositivo.</p>
 
-            <label>
-              Teléfono
-              <input name="phone" type="tel" autocomplete="tel" required placeholder="+54 9 11 1234 5678">
-            </label>
-
-            <label>
-              Edad
-              <input name="age" type="number" min="13" max="99" required placeholder="25">
-            </label>
-
-            <label>
-              Nivel actual
-              <select name="level" required>
-                <option value="">Seleccionar</option>
-                <option>Principiante</option>
-                <option>Intermedio</option>
-                <option>Avanzado</option>
-              </select>
-            </label>
-
-            <label>
-              Modalidad preferida
-              <select name="mode" required>
-                <option value="">Seleccionar</option>
-                <option>Online</option>
-                <option>Presencial</option>
-                <option>Híbrida</option>
-              </select>
-            </label>
+        <section class="module active" id="bienvenida" data-module-view="welcome">
+          <div class="module-heading">
+            <p class="step-label">Inicio</p>
+            <h2>Elegir desde donde entra cada alumno</h2>
+            <p>La PWA adapta el mensaje inicial segun si la persona lidera equipos o busca mejorar su propio trabajo.</p>
           </div>
+          <div class="audience-switch" role="group" aria-label="Tipo de participante">
+            <button type="button" class="audience-card active" data-audience="leader">
+              <span>Lideres y equipos</span>
+              <strong>El peligro de inundar a tu equipo con IA sin darles una estrategia.</strong>
+              <small>Para pasar de la urgencia a una adopcion con criterio.</small>
+            </button>
+            <button type="button" class="audience-card" data-audience="professional">
+              <span>Profesionales</span>
+              <strong>Corriendo detras de la tecnologia o liderando tu espacio de trabajo?</strong>
+              <small>Para recuperar tiempo, foco y control.</small>
+            </button>
+          </div>
+          <div class="copy-panel" id="captureCopy"></div>
+          <button class="primary-action" type="button" data-jump="profile">Empezar mi recorrido</button>
+        </section>
 
-          <label>
-            Objetivo principal
-            <textarea name="goal" rows="4" required placeholder="Contanos qué actividades realizas todos los días que se podrías mejorar con el curso?"></textarea>
-          </label>
+        <section class="module" id="perfil" data-module-view="profile">
+          <div class="module-heading">
+            <p class="step-label">Registro y perfil</p>
+            <h2>Datos base del participante</h2>
+            <p>Sirve para ubicar al alumno en el grupo y conectar los proximos modulos con su contexto real.</p>
+          </div>
+          <form class="module-form" data-module="profile">
+            <div class="form-grid">
+              <label>Nombre y apellido
+                <input name="fullName" autocomplete="name" required minlength="3">
+              </label>
+              <label>Email
+                <input name="email" type="email" autocomplete="email" required>
+              </label>
+              <label>Telefono
+                <input name="phone" autocomplete="tel" required minlength="6">
+              </label>
+              <label>Edad
+                <input name="age" type="number" min="13" max="99" required>
+              </label>
+              <label>Rol actual
+                <input name="role" required placeholder="Ej. responsable de RRHH">
+              </label>
+              <label>Rubro
+                <input name="industry" required placeholder="Ej. pyme industrial">
+              </label>
+              <label>Experiencia con IA
+                <select name="aiExperience" required>
+                  <option value="">Seleccionar</option>
+                  <option>Sin uso previo</option>
+                  <option>Uso ocasional</option>
+                  <option>Uso semanal</option>
+                  <option>Uso frecuente</option>
+                </select>
+              </label>
+              <label>Tipo de participante
+                <select name="participantType" required>
+                  <option value="">Seleccionar</option>
+                  <option value="leader">Lider / coordino equipo</option>
+                  <option value="professional">Profesional / mando medio</option>
+                </select>
+              </label>
+            </div>
+            <label>Objetivo personal del taller
+              <textarea name="personalGoal" rows="4" required placeholder="Que queres poder hacer mejor al terminar?"></textarea>
+            </label>
+            <button class="primary-action" type="submit">Guardar perfil</button>
+          </form>
+        </section>
 
-          <label class="consent">
-            <input name="consent" type="checkbox" required>
-            Acepto recibir información sobre el curso y sus fechas de inicio.
-          </label>
+        <section class="module" id="termometro1" data-module-view="thermometer1">
+          <div class="module-heading">
+            <p class="step-label">Pre-work</p>
+            <h2>Termometro 1: auto-observacion</h2>
+            <p>Mapea tareas que consumen tiempo y foco antes de entrar al primer encuentro.</p>
+          </div>
+          <form class="module-form" data-module="thermometer1">
+            <label>Tareas repetitivas que te quitan tiempo
+              <textarea name="repetitiveTasks" rows="4" required></textarea>
+            </label>
+            <div class="form-grid">
+              <label>Frecuencia
+                <select name="frequency" required>
+                  <option value="">Seleccionar</option>
+                  <option>Todos los dias</option>
+                  <option>Varias veces por semana</option>
+                  <option>Una vez por semana</option>
+                  <option>Algunas veces por mes</option>
+                </select>
+              </label>
+              <label>Tiempo estimado por semana
+                <input name="weeklyTime" required placeholder="Ej. 4 horas">
+              </label>
+              <label>Energia que consume
+                <input name="energyDrain" type="range" min="1" max="5" value="3">
+              </label>
+              <label>Riesgo de delegar mal
+                <input name="delegationRisk" type="range" min="1" max="5" value="3">
+              </label>
+            </div>
+            <label>Que parte requiere criterio humano?
+              <textarea name="humanCriteria" rows="4" required></textarea>
+            </label>
+            <button class="primary-action" type="submit">Guardar termometro 1</button>
+          </form>
+        </section>
 
-          <button type="submit">Enviar registro</button>
-          <p class="status" id="status" role="status" aria-live="polite"></p>
-        </form>
+        <section class="module" id="termometro2" data-module-view="thermometer2">
+          <div class="module-heading">
+            <p class="step-label">Encuentro 1</p>
+            <h2>Termometro 2: FOMO / FOBO</h2>
+            <p>Captura la temperatura emocional del grupo para trabajar resistencia, urgencia y criterio.</p>
+          </div>
+          <form class="module-form" data-module="thermometer2">
+            <div class="scale-grid">
+              <label>Me preocupa quedarme atras
+                <input name="fearLagging" type="range" min="1" max="5" value="3">
+              </label>
+              <label>Me preocupa delegar mal
+                <input name="fearBadDelegation" type="range" min="1" max="5" value="3">
+              </label>
+              <label>Me siento sobrecargado/a
+                <input name="overload" type="range" min="1" max="5" value="3">
+              </label>
+              <label>Tengo confianza para experimentar
+                <input name="experimentConfidence" type="range" min="1" max="5" value="3">
+              </label>
+            </div>
+            <label>Oportunidad concreta que ves en tu trabajo
+              <textarea name="opportunity" rows="4" required></textarea>
+            </label>
+            <button class="primary-action" type="submit">Guardar termometro 2</button>
+          </form>
+        </section>
+
+        <section class="module" id="caso-real" data-module-view="case">
+          <div class="module-heading">
+            <p class="step-label">Entre encuentros 1 y 2</p>
+            <h2>Caso real para experimentar</h2>
+            <p>Elegi un problema real, acotado y seguro. No cargues informacion sensible.</p>
+          </div>
+          <form class="module-form" data-module="case">
+            <div class="form-grid">
+              <label>Problema laboral real
+                <input name="realProblem" required>
+              </label>
+              <label>Contexto
+                <input name="context" required placeholder="Area, rubro o situacion">
+              </label>
+            </div>
+            <label>Entrada actual
+              <textarea name="currentInput" rows="3" required placeholder="Que informacion usas hoy?"></textarea>
+            </label>
+            <label>Resultado esperado
+              <textarea name="expectedOutput" rows="3" required></textarea>
+            </label>
+            <div class="form-grid">
+              <label>Que puede asistir IA?
+                <textarea name="aiAssistance" rows="4" required></textarea>
+              </label>
+              <label>Que decide la persona?
+                <textarea name="humanDecision" rows="4" required></textarea>
+              </label>
+              <label>Que no debe decidir IA?
+                <textarea name="aiBoundary" rows="4" required></textarea>
+              </label>
+              <label>Riesgos
+                <textarea name="risks" rows="4" required></textarea>
+              </label>
+            </div>
+            <button class="primary-action" type="submit">Guardar caso real</button>
+          </form>
+        </section>
+
+        <section class="module" id="flujo" data-module-view="flow">
+          <div class="module-heading">
+            <p class="step-label">Encuentro 2</p>
+            <h2>Diseno de flujo IA + humano</h2>
+            <p>Transforma el caso en un flujo practico: que delegar, que supervisar y que preservar.</p>
+          </div>
+          <form class="module-form" data-module="flow">
+            <label>Flujo actual
+              <textarea name="currentFlow" rows="4" required></textarea>
+            </label>
+            <label>Nuevo flujo con IA
+              <textarea name="newFlow" rows="4" required></textarea>
+            </label>
+            <div class="form-grid">
+              <label>Paso delegado a IA
+                <textarea name="delegatedStep" rows="3" required></textarea>
+              </label>
+              <label>Paso supervisado por humano
+                <textarea name="supervisedStep" rows="3" required></textarea>
+              </label>
+              <label>Paso preservado como humano
+                <textarea name="preservedStep" rows="3" required></textarea>
+              </label>
+              <label>Indicador de mejora
+                <textarea name="improvementMetric" rows="3" required></textarea>
+              </label>
+            </div>
+            <button class="primary-action" type="submit">Guardar flujo</button>
+          </form>
+        </section>
+
+        <section class="module" id="experimento" data-module-view="experiment">
+          <div class="module-heading">
+            <p class="step-label">Entre encuentros 2 y 3</p>
+            <h2>Experimento semanal</h2>
+            <p>Registra evidencia concreta: que paso al probar el flujo en una tarea real.</p>
+          </div>
+          <form class="module-form" data-module="experiment">
+            <div class="form-grid">
+              <label>Que probaste?
+                <input name="testedAction" required>
+              </label>
+              <label>Herramienta usada
+                <input name="toolUsed" required placeholder="Ej. ChatGPT">
+              </label>
+              <label>Tiempo antes
+                <input name="timeBefore" required>
+              </label>
+              <label>Tiempo despues
+                <input name="timeAfter" required>
+              </label>
+            </div>
+            <label>Resultado
+              <textarea name="result" rows="3" required></textarea>
+            </label>
+            <label>Correcciones humanas necesarias
+              <textarea name="humanCorrections" rows="3" required></textarea>
+            </label>
+            <label>Aprendizaje
+              <textarea name="learning" rows="3" required></textarea>
+            </label>
+            <label>Proximo ajuste
+              <textarea name="nextAdjustment" rows="3" required></textarea>
+            </label>
+            <button class="primary-action" type="submit">Guardar experimento</button>
+          </form>
+        </section>
+
+        <section class="module" id="manifiesto" data-module-view="manifesto">
+          <div class="module-heading">
+            <p class="step-label">Encuentro 3</p>
+            <h2>Manifiesto de Criterio Humano</h2>
+            <p>Cierre del taller: una declaracion concreta de uso responsable, util y humano.</p>
+          </div>
+          <form class="module-form" data-module="manifesto">
+            <div class="form-grid">
+              <label>Que voy a delegar
+                <textarea name="willDelegate" rows="3" required></textarea>
+              </label>
+              <label>Que voy a preservar
+                <textarea name="willPreserve" rows="3" required></textarea>
+              </label>
+              <label>Limite etico que voy a respetar
+                <textarea name="ethicalLimit" rows="3" required></textarea>
+              </label>
+              <label>Como voy a verificar resultados
+                <textarea name="verificationPractice" rows="3" required></textarea>
+              </label>
+            </div>
+            <label>Compromiso de practica por 30 dias
+              <textarea name="thirtyDayCommitment" rows="3" required></textarea>
+            </label>
+            <label>Firma textual
+              <input name="signature" required placeholder="Escribi tu nombre completo">
+            </label>
+            <button class="primary-action" type="submit">Firmar manifiesto</button>
+          </form>
+        </section>
+
+        <section class="module" id="cierre" data-module-view="summary">
+          <div class="module-heading">
+            <p class="step-label">Cierre</p>
+            <h2>Resumen del recorrido</h2>
+            <p>Este panel muestra lo guardado en el dispositivo y que modulos ya fueron sincronizados.</p>
+          </div>
+          <div class="summary-list" id="summaryList"></div>
+          <div class="actions-row">
+            <button class="secondary-action" type="button" id="syncButton">Sincronizar pendientes</button>
+            <button class="secondary-action danger" type="button" id="resetButton">Reiniciar datos locales</button>
+          </div>
+        </section>
       </section>
     </main>
 
