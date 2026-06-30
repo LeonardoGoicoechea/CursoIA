@@ -20,7 +20,8 @@ const MODULES = {
       "industry",
       "aiExperience",
       "participantType",
-      "personalGoal"
+      "personalGoal",
+      "consent"
     ]
   },
   thermometer1: {
@@ -65,6 +66,7 @@ const FIELD_RULES = {
   aiExperience: { type: "string", maxLength: SHORT_TEXT_MAX_LENGTH, required: true },
   participantType: { type: "string", maxLength: SHORT_TEXT_MAX_LENGTH, required: true },
   personalGoal: { type: "string", maxLength: DEFAULT_MAX_LENGTH, required: true },
+  consent: { type: "string", maxLength: 5, required: true, pattern: /^(true)$/ },
   repetitiveTasks: { type: "string", maxLength: LONG_TEXT_MAX_LENGTH, required: true },
   frequency: { type: "string", maxLength: SHORT_TEXT_MAX_LENGTH, required: true },
   weeklyTime: { type: "string", maxLength: SHORT_TEXT_MAX_LENGTH, required: true },

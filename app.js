@@ -22,7 +22,7 @@ const MODULE_SEQUENCE = [
 ];
 
 const MODULE_FIELDS = {
-  profile: ["fullName", "email", "phone", "age", "role", "industry", "aiExperience", "participantType", "personalGoal"],
+  profile: ["fullName", "email", "phone", "age", "role", "industry", "aiExperience", "participantType", "personalGoal", "consent"],
   thermometer1: ["repetitiveTasks", "frequency", "weeklyTime", "energyDrain", "delegationRisk", "humanCriteria"],
   thermometer2: ["fearLagging", "fearBadDelegation", "overload", "experimentConfidence", "opportunity"],
   case: ["realProblem", "context", "currentInput", "expectedOutput", "aiAssistance", "humanDecision", "aiBoundary", "risks"],
@@ -31,12 +31,13 @@ const MODULE_FIELDS = {
   manifesto: ["willDelegate", "willPreserve", "ethicalLimit", "verificationPractice", "thirtyDayCommitment", "signature"]
 };
 
-const STORAGE_SCHEMA_VERSION = "2";
+const STORAGE_SCHEMA_VERSION = "3";
 
 const STORAGE_KEYS = {
   participantId: "cursoiaParticipantId",
   modules: "cursoiaModules",
   queue: "cursoiaQueue",
+  syncToken: "cursoiaSyncToken",
   audience: "cursoiaAudience",
   schemaVersion: "cursoiaSchemaVersion"
 };
@@ -47,6 +48,10 @@ const summaryListEl = document.querySelector("#summaryList");
 const installButton = document.querySelector("#installButton");
 const syncButton = document.querySelector("#syncButton");
 const resetButton = document.querySelector("#resetButton");
+const syncTokenInput = document.querySelector("#syncTokenInput");
+const saveSyncTokenButton = document.querySelector("#saveSyncTokenButton");
+const clearSyncTokenButton = document.querySelector("#clearSyncTokenButton");
+const syncTokenStateEl = document.querySelector("#syncTokenState");
 const captureCopyEl = document.querySelector("#captureCopy");
 const navLinks = [...document.querySelectorAll("[data-target]")];
 const views = [...document.querySelectorAll("[data-module-view]")];
@@ -74,6 +79,8 @@ const nowIso = () => new Date().toISOString();
 const createId = () =>
   window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
+const isAcceptedConsent = (value) => value === true || value === "true";
+
 const readJson = (key, fallback) => {
   try {
     return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback));
@@ -84,6 +91,31 @@ const readJson = (key, fallback) => {
 
 const writeJson = (key, value) => {
   localStorage.setItem(key, JSON.stringify(value));
+};
+
+const readSyncToken = () => localStorage.getItem(STORAGE_KEYS.syncToken)?.trim() || "";
+
+const syncTokenConfigured = () => readSyncToken().length > 0;
+
+const renderSyncTokenState = () => {
+  const configured = syncTokenConfigured();
+  if (syncTokenStateEl) {
+    syncTokenStateEl.textContent = configured
+      ? "Clave guardada en este dispositivo."
+      : "Sin clave guardada. La app seguira guardando localmente hasta configurarla.";
+  }
+  if (clearSyncTokenButton) {
+    clearSyncTokenButton.disabled = !configured;
+  }
+};
+
+const writeSyncToken = (value) => {
+  if (value) {
+    localStorage.setItem(STORAGE_KEYS.syncToken, value);
+  } else {
+    localStorage.removeItem(STORAGE_KEYS.syncToken);
+  }
+  renderSyncTokenState();
 };
 
 const getParticipantId = () => {
@@ -199,7 +231,7 @@ const formToPayload = (form) => {
   const payload = {};
   const formData = new FormData(form);
   for (const [key, value] of formData.entries()) {
-    payload[key] = value === "true" ? true : String(value).trim();
+    payload[key] = String(value).trim();
   }
   return payload;
 };
@@ -207,7 +239,9 @@ const formToPayload = (form) => {
 const filterModulePayload = (moduleId, payload = {}) => {
   const fields = MODULE_FIELDS[moduleId] || [];
   return fields.reduce((filtered, field) => {
-    filtered[field] = payload[field] ?? "";
+    filtered[field] = field === "consent"
+      ? (isAcceptedConsent(payload[field]) ? "true" : "")
+      : (payload[field] ?? "");
     return filtered;
   }, {});
 };
@@ -241,6 +275,10 @@ const migrateLocalState = () => {
 const fillForm = (form, payload = {}) => {
   [...form.elements].forEach((field) => {
     if (!field.name) return;
+    if (field.type === "checkbox") {
+      field.checked = isAcceptedConsent(payload[field.name]);
+      return;
+    }
     field.value = payload[field.name] ?? field.defaultValue ?? "";
   });
 };
@@ -252,7 +290,7 @@ const buildEnvelope = (moduleId, payload) => {
   const appVersion = CONFIG.appVersion || "1.0.0";
   const storedProfile = readModules().profile?.payload || {};
   const basePayload = moduleId === "profile" ? payload : storedProfile;
-  const acceptedConsent = payload.consent === true || basePayload.consent === true;
+  const acceptedConsent = isAcceptedConsent(payload.consent) || isAcceptedConsent(basePayload.consent);
   const modulePayload = filterModulePayload(moduleId, payload);
   const compatibilityPayload = {
     ...basePayload,
@@ -306,6 +344,8 @@ const validateForm = (form) => {
 
 const sendEnvelope = async (envelope) => {
   if (!endpointConfigured()) throw new Error("Endpoint no configurado.");
+  const syncToken = readSyncToken();
+  if (!syncToken) throw new Error("Falta configurar la clave de sincronizacion en este dispositivo.");
 
   const controller = new AbortController();
   const timeout = window.setTimeout(
@@ -319,7 +359,7 @@ const sendEnvelope = async (envelope) => {
       redirect: "follow",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({
-        token: CONFIG.apiToken || "",
+        token: syncToken,
         ...envelope
       }),
       signal: controller.signal
@@ -337,7 +377,7 @@ const sendEnvelope = async (envelope) => {
 };
 
 const syncQueue = async () => {
-  if (syncing || !navigator.onLine || !endpointConfigured()) return;
+  if (syncing || !navigator.onLine || !endpointConfigured() || !syncTokenConfigured()) return;
   const queue = refreshStoredQueue().map(prepareQueuedEnvelope);
   if (queue.length === 0) return;
 
@@ -384,6 +424,12 @@ const saveModule = async (moduleId, payload) => {
   }
 
   const envelope = buildEnvelope(moduleId, payload);
+
+  if (!syncTokenConfigured()) {
+    enqueue(envelope);
+    setStatus(`${meta.label} guardado localmente. Falta configurar la clave de sincronizacion.`, "warning");
+    return;
+  }
 
   try {
     await sendEnvelope(envelope);
@@ -596,14 +642,42 @@ document.querySelectorAll("[data-audience]").forEach((button) => {
   });
 });
 
-syncButton?.addEventListener("click", syncQueue);
+saveSyncTokenButton?.addEventListener("click", async () => {
+  const value = syncTokenInput?.value.trim() || "";
+  if (!value) {
+    setStatus("Pega una clave de sincronizacion antes de guardarla.", "warning");
+    syncTokenInput?.focus();
+    return;
+  }
+  writeSyncToken(value);
+  if (syncTokenInput) syncTokenInput.value = "";
+  setStatus("Clave de sincronizacion guardada en este dispositivo.", "success");
+  await syncQueue();
+});
+
+clearSyncTokenButton?.addEventListener("click", () => {
+  writeSyncToken("");
+  if (syncTokenInput) syncTokenInput.value = "";
+  setStatus("Clave de sincronizacion eliminada de este dispositivo.", "warning");
+});
+
+syncButton?.addEventListener("click", () => {
+  if (!syncTokenConfigured()) {
+    setStatus("Configura la clave de sincronizacion antes de enviar pendientes.", "warning");
+    syncTokenInput?.focus();
+    return;
+  }
+  syncQueue();
+});
 
 resetButton?.addEventListener("click", () => {
   const confirmed = window.confirm("Esto borra los datos locales de este dispositivo. Continuar?");
   if (!confirmed) return;
   Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key));
   getParticipantId();
+  if (syncTokenInput) syncTokenInput.value = "";
   hydrateForms();
+  renderSyncTokenState();
   renderProgress();
   setStatus("Datos locales reiniciados.", "warning");
 });
@@ -641,8 +715,13 @@ getParticipantId();
 prepareInlineContinueButtons();
 renderCaptureCopy();
 hydrateForms();
+renderSyncTokenState();
 refreshStoredQueue();
 renderProgress();
+
+if (endpointConfigured() && !syncTokenConfigured()) {
+  setStatus("Falta configurar la clave de sincronizacion. Los avances se guardaran localmente hasta ingresarla.", "warning");
+}
 
 const initialHash = window.location.hash.replace("#", "");
 const initialView = views.find((view) => view.id === initialHash)?.dataset.moduleView || "welcome";

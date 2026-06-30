@@ -49,7 +49,6 @@ Editar `config.js`:
 ```js
 window.COURSE_REGISTRATION_CONFIG = {
   googleAppsScriptUrl: "https://script.google.com/macros/s/DEPLOYMENT_ID/exec",
-  apiToken: "PEGAR_TOKEN_LARGO_AQUI",
   requestTimeoutMs: 12000,
   appVersion: "1.0.0",
   releaseDates: {}
@@ -57,7 +56,7 @@ window.COURSE_REGISTRATION_CONFIG = {
 ```
 
 - `googleAppsScriptUrl`: URL `/exec` del despliegue Web App.
-- `apiToken`: obligatorio en produccion. Debe coincidir con la Script Property `CURSOIA_API_TOKEN`.
+- `CURSOIA_API_TOKEN`: se configura solo en Apps Script. La app pide la clave en la interfaz y la guarda localmente en cada dispositivo.
 - `requestTimeoutMs`: espera maxima de cada envio.
 - `appVersion`: version enviada en cada payload.
 - `releaseDates`: reservado para liberar modulos por fecha en una version futura.
@@ -92,7 +91,7 @@ El Apps Script crea y usa estas pestanas:
 - `Manifiestos`
 - `Eventos`
 
-Pegar `scripts/google-apps-script.js` en Google Apps Script, configurar `CURSOIA_SPREADSHEET_ID` y `CURSOIA_API_TOKEN` como Script properties, desplegar como Web App y copiar la URL `/exec` en `config.js`.
+Pegar `scripts/google-apps-script.js` en Google Apps Script, configurar `CURSOIA_SPREADSHEET_ID` y `CURSOIA_API_TOKEN` como Script properties, desplegar como Web App, copiar la URL `/exec` en `config.js` e ingresar la clave de sincronizacion desde la UI de la app en cada dispositivo que vaya a sincronizar.
 
 ## Privacidad
 
@@ -107,13 +106,14 @@ No hay login ni cifrado local en esta version. No debe usarse para recolectar da
 ## Verificacion
 
 1. Ejecutar localmente desde `127.0.0.1`.
-2. Completar perfil online y confirmar fila en `Perfiles`.
-3. Completar cada modulo y confirmar su pestana.
-4. Cortar internet, completar un modulo y revisar que quede pendiente.
-5. Reconectar y confirmar sincronizacion.
-6. Recargar y confirmar que el progreso local persiste.
-7. Abrir DevTools > Application y confirmar service worker activo.
-8. Publicar en GitHub Pages y confirmar `index.html`, `sw.js`, `manifest.webmanifest` e iconos.
+2. Ingresar la clave de sincronizacion en el panel superior.
+3. Completar perfil online y confirmar fila en `Perfiles`.
+4. Completar cada modulo y confirmar su pestana.
+5. Cortar internet, completar un modulo y revisar que quede pendiente.
+6. Reconectar y confirmar sincronizacion.
+7. Recargar y confirmar que el progreso local persiste.
+8. Abrir DevTools > Application y confirmar service worker activo.
+9. Publicar en GitHub Pages y confirmar `index.html`, `sw.js`, `manifest.webmanifest` e iconos.
 
 ## Publicacion
 
@@ -143,10 +143,10 @@ En el proyecto de Apps Script, abrir **Project Settings > Script properties** y 
 
 ```text
 CURSOIA_SPREADSHEET_ID = ID_DE_LA_PLANILLA
-CURSOIA_API_TOKEN = MISMO_TOKEN_DE_config.js
+CURSOIA_API_TOKEN = CLAVE_LARGA_DE_SINCRONIZACION
 ```
 
-El backend lee esos valores con `PropertiesService`; no deben quedar hardcodeados en `scripts/google-apps-script.js`.
+El backend lee esos valores con `PropertiesService`; no deben quedar hardcodeados en `scripts/google-apps-script.js` ni publicados en `config.js`.
 
 Para rotar el token:
 
@@ -156,9 +156,9 @@ Para rotar el token:
    node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
    ```
 
-2. Reemplazar `apiToken` en `config.js`.
-3. Reemplazar `CURSOIA_API_TOKEN` en Script properties.
-4. Publicar una nueva version del Web App si corresponde.
+2. Reemplazar `CURSOIA_API_TOKEN` en Script properties.
+3. Publicar una nueva version del Web App si corresponde.
+4. Pedir a cada dispositivo que borre la clave anterior y cargue la nueva desde la UI.
 5. Subir `appVersion` y `CACHE_NAME` para que la PWA tome la version nueva.
 
 ## QA manual minimo
@@ -170,11 +170,12 @@ Para rotar el token:
    ```
 
 2. Abrir `http://127.0.0.1:8002/` en una ventana privada o despues de limpiar service workers.
-3. Completar el perfil y al menos un modulo del recorrido.
-4. Desconectar internet, completar otro modulo y confirmar que queda guardado localmente.
-5. Reconectar internet, usar **Sincronizar** y confirmar que desaparece la cola pendiente.
-6. Revisar en Google Sheets que se haya creado o actualizado la hoja correspondiente.
-7. Confirmar que `appVersion`, `participantId`, `submissionId` y `payloadJson` quedaron registrados.
+3. Ingresar la clave de sincronizacion en el panel superior.
+4. Completar el perfil y al menos un modulo del recorrido.
+5. Desconectar internet, completar otro modulo y confirmar que queda guardado localmente.
+6. Reconectar internet, usar **Sincronizar** y confirmar que desaparece la cola pendiente.
+7. Revisar en Google Sheets que se haya creado o actualizado la hoja correspondiente.
+8. Confirmar que `appVersion`, `participantId`, `submissionId` y `payloadJson` quedaron registrados.
 
 ## Recuperacion
 
@@ -192,7 +193,7 @@ Ejecutar:
 node tools/smoke-test.js
 ```
 
-La prueba verifica que los formularios principales existan, que los campos esperados tengan `maxlength`, que la app conserve persistencia/sincronizacion y que `config.js` tenga endpoint y token configurados.
+La prueba verifica que los formularios principales existan, que los campos esperados tengan `maxlength`, que la app conserve persistencia/sincronizacion y que `config.js` tenga endpoint sin publicar el token.
 
 Para una comprobacion visual rapida con Playwright:
 

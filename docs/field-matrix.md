@@ -20,7 +20,7 @@ Cada envio agrega:
 
 | Modulo | Hoja | Campos |
 | --- | --- | --- |
-| `profile` | `Perfiles` | `fullName`, `email`, `phone`, `age`, `role`, `industry`, `aiExperience`, `participantType`, `personalGoal` |
+| `profile` | `Perfiles` | `fullName`, `email`, `phone`, `age`, `role`, `industry`, `aiExperience`, `participantType`, `personalGoal`, `consent` |
 | `thermometer1` | `Termometro1` | `repetitiveTasks`, `frequency`, `weeklyTime`, `energyDrain`, `delegationRisk`, `humanCriteria` |
 | `thermometer2` | `Termometro2` | `fearLagging`, `fearBadDelegation`, `overload`, `experimentConfidence`, `opportunity` |
 | `case` | `CasosReales` | `realProblem`, `context`, `currentInput`, `expectedOutput`, `aiAssistance`, `humanDecision`, `aiBoundary`, `risks` |
@@ -31,6 +31,7 @@ Cada envio agrega:
 ## Limites
 
 - Email: 254 caracteres y formato basico de email.
+- `consent`: valor obligatorio `true`.
 - Campos cortos: 160 caracteres.
 - Telefono: 40 caracteres.
 - Edad: 20 caracteres.

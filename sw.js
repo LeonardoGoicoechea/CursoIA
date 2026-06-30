@@ -1,4 +1,4 @@
-const CACHE_NAME = "cursoia-v1.1.7";
+const CACHE_NAME = "cursoia-v1.1.8";
 const APP_SHELL = "./index.html";
 const ASSETS = [
   APP_SHELL,
@@ -42,6 +42,21 @@ self.addEventListener("fetch", (event) => {
           return response;
         })
         .catch(() => caches.match(APP_SHELL))
+    );
+    return;
+  }
+
+  if (requestUrl.pathname.endsWith("/config.js")) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request))
     );
     return;
   }

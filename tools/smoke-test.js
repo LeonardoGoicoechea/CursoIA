@@ -17,7 +17,7 @@ const expectedModules = [
 ];
 
 const moduleFields = {
-  profile: ["fullName", "email", "phone", "age", "role", "industry", "aiExperience", "participantType", "personalGoal"],
+  profile: ["fullName", "email", "phone", "age", "role", "industry", "aiExperience", "participantType", "personalGoal", "consent"],
   thermometer1: ["repetitiveTasks", "frequency", "weeklyTime", "energyDrain", "delegationRisk", "humanCriteria"],
   thermometer2: ["fearLagging", "fearBadDelegation", "overload", "experimentConfidence", "opportunity"],
   case: ["realProblem", "context", "currentInput", "expectedOutput", "aiAssistance", "humanDecision", "aiBoundary", "risks"],
@@ -57,10 +57,14 @@ for (const moduleId of expectedModules) {
   }
 }
 
+assert(html.includes('id="syncTokenInput"'), "Missing sync token input");
+assert(html.includes('id="saveSyncTokenButton"'), "Missing sync token save button");
+
 assert(app.includes("localStorage.setItem"), "app.js does not persist locally");
 assert(app.includes("fetch("), "app.js does not sync with fetch");
 assert(app.includes("AbortController"), "app.js does not enforce request timeout");
 assert(app.includes("navigator.serviceWorker.register"), "app.js does not register service worker");
+assert(app.includes("cursoiaSyncToken"), "app.js must persist sync token locally");
 
 const sandbox = { window: {} };
 vm.createContext(sandbox);
@@ -69,7 +73,7 @@ vm.runInContext(config, sandbox);
 const cfg = sandbox.window.COURSE_REGISTRATION_CONFIG;
 assert(cfg.googleAppsScriptUrl.startsWith("https://"), "googleAppsScriptUrl must be https");
 assert(cfg.googleAppsScriptUrl.endsWith("/exec"), "googleAppsScriptUrl must end with /exec");
-assert(typeof cfg.apiToken === "string" && cfg.apiToken.length >= 32, "apiToken must be configured");
+assert(!Object.prototype.hasOwnProperty.call(cfg, "apiToken"), "config.js must not hardcode apiToken");
 assert(Number.isInteger(cfg.requestTimeoutMs) && cfg.requestTimeoutMs >= 5000, "requestTimeoutMs is too low");
 assert(serviceWorker.includes(`cursoia-v${cfg.appVersion}`), "sw.js CACHE_NAME must match config appVersion");
 assert(app.includes("migrateLocalState"), "app.js must migrate local storage schema");
