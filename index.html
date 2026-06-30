@@ -74,22 +74,22 @@
           <form class="module-form" data-module="profile">
             <div class="form-grid">
               <label>Nombre y apellido
-                <input name="fullName" autocomplete="name" required minlength="3">
+                <input name="fullName" autocomplete="name" required minlength="3" maxlength="160">
               </label>
               <label>Email
-                <input name="email" type="email" autocomplete="email" required>
+                <input name="email" type="email" autocomplete="email" required maxlength="254">
               </label>
               <label>Telefono
-                <input name="phone" autocomplete="tel" required minlength="6">
+                <input name="phone" autocomplete="tel" required minlength="6" maxlength="40">
               </label>
               <label>Edad
-                <input name="age" type="number" min="13" max="99" required>
+                <input name="age" type="number" min="13" max="99" required maxlength="20">
               </label>
               <label>Rol actual
-                <input name="role" required placeholder="Ej. responsable de RRHH">
+                <input name="role" required placeholder="Ej. responsable de RRHH" maxlength="160">
               </label>
               <label>Rubro
-                <input name="industry" required placeholder="Ej. pyme industrial">
+                <input name="industry" required placeholder="Ej. pyme industrial" maxlength="160">
               </label>
               <label>Experiencia con IA
                 <select name="aiExperience" required>
@@ -109,7 +109,7 @@
               </label>
             </div>
             <label>Objetivo personal del taller
-              <textarea name="personalGoal" rows="4" required placeholder="Que queres poder hacer mejor al terminar?"></textarea>
+              <textarea name="personalGoal" rows="4" required placeholder="Que queres poder hacer mejor al terminar?" maxlength="1200"></textarea>
             </label>
             <label class="checkbox-row">
               <input name="consent" type="checkbox" value="true" required>
@@ -127,7 +127,7 @@
           </div>
           <form class="module-form" data-module="thermometer1">
             <label>Tareas repetitivas que te quitan tiempo
-              <textarea name="repetitiveTasks" rows="4" required></textarea>
+              <textarea name="repetitiveTasks" rows="4" required maxlength="2400"></textarea>
             </label>
             <div class="form-grid">
               <label>Frecuencia
@@ -140,7 +140,7 @@
                 </select>
               </label>
               <label>Tiempo estimado por semana
-                <input name="weeklyTime" required placeholder="Ej. 4 horas">
+                <input name="weeklyTime" required placeholder="Ej. 4 horas" maxlength="160">
               </label>
               <label>Energia que consume
                 <input name="energyDrain" type="range" min="1" max="5" value="3">
@@ -150,7 +150,7 @@
               </label>
             </div>
             <label>Que parte requiere criterio humano?
-              <textarea name="humanCriteria" rows="4" required></textarea>
+              <textarea name="humanCriteria" rows="4" required maxlength="1200"></textarea>
             </label>
             <button class="primary-action" type="submit">Guardar termometro 1</button>
           </form>
@@ -178,7 +178,7 @@
               </label>
             </div>
             <label>Oportunidad concreta que ves en tu trabajo
-              <textarea name="opportunity" rows="4" required></textarea>
+              <textarea name="opportunity" rows="4" required maxlength="1200"></textarea>
             </label>
             <button class="primary-action" type="submit">Guardar termometro 2</button>
           </form>
@@ -193,30 +193,30 @@
           <form class="module-form" data-module="case">
             <div class="form-grid">
               <label>Problema laboral real
-                <input name="realProblem" required>
+                <input name="realProblem" required maxlength="2400">
               </label>
               <label>Contexto
-                <input name="context" required placeholder="Area, rubro o situacion">
+                <input name="context" required placeholder="Area, rubro o situacion" maxlength="2400">
               </label>
             </div>
             <label>Entrada actual
-              <textarea name="currentInput" rows="3" required placeholder="Que informacion usas hoy?"></textarea>
+              <textarea name="currentInput" rows="3" required placeholder="Que informacion usas hoy?" maxlength="2400"></textarea>
             </label>
             <label>Resultado esperado
-              <textarea name="expectedOutput" rows="3" required></textarea>
+              <textarea name="expectedOutput" rows="3" required maxlength="2400"></textarea>
             </label>
             <div class="form-grid">
               <label>Que puede asistir IA?
-                <textarea name="aiAssistance" rows="4" required></textarea>
+                <textarea name="aiAssistance" rows="4" required maxlength="2400"></textarea>
               </label>
               <label>Que decide la persona?
-                <textarea name="humanDecision" rows="4" required></textarea>
+                <textarea name="humanDecision" rows="4" required maxlength="2400"></textarea>
               </label>
               <label>Que no debe decidir IA?
-                <textarea name="aiBoundary" rows="4" required></textarea>
+                <textarea name="aiBoundary" rows="4" required maxlength="2400"></textarea>
               </label>
               <label>Riesgos
-                <textarea name="risks" rows="4" required></textarea>
+                <textarea name="risks" rows="4" required maxlength="2400"></textarea>
               </label>
             </div>
             <button class="primary-action" type="submit">Guardar caso real</button>
@@ -231,23 +231,23 @@
           </div>
           <form class="module-form" data-module="flow">
             <label>Flujo actual
-              <textarea name="currentFlow" rows="4" required></textarea>
+              <textarea name="currentFlow" rows="4" required maxlength="2400"></textarea>
             </label>
             <label>Nuevo flujo con IA
-              <textarea name="newFlow" rows="4" required></textarea>
+              <textarea name="newFlow" rows="4" required maxlength="2400"></textarea>
             </label>
             <div class="form-grid">
               <label>Paso delegado a IA
-                <textarea name="delegatedStep" rows="3" required></textarea>
+                <textarea name="delegatedStep" rows="3" required maxlength="1200"></textarea>
               </label>
               <label>Paso supervisado por humano
-                <textarea name="supervisedStep" rows="3" required></textarea>
+                <textarea name="supervisedStep" rows="3" required maxlength="1200"></textarea>
               </label>
               <label>Paso preservado como humano
-                <textarea name="preservedStep" rows="3" required></textarea>
+                <textarea name="preservedStep" rows="3" required maxlength="1200"></textarea>
               </label>
               <label>Indicador de mejora
-                <textarea name="improvementMetric" rows="3" required></textarea>
+                <textarea name="improvementMetric" rows="3" required maxlength="1200"></textarea>
               </label>
             </div>
             <button class="primary-action" type="submit">Guardar flujo</button>
@@ -263,29 +263,29 @@
           <form class="module-form" data-module="experiment">
             <div class="form-grid">
               <label>Que probaste?
-                <input name="testedAction" required>
+                <input name="testedAction" required maxlength="2400">
               </label>
               <label>Herramienta usada
-                <input name="toolUsed" required placeholder="Ej. ChatGPT">
+                <input name="toolUsed" required placeholder="Ej. ChatGPT" maxlength="160">
               </label>
               <label>Tiempo antes
-                <input name="timeBefore" required>
+                <input name="timeBefore" required maxlength="160">
               </label>
               <label>Tiempo despues
-                <input name="timeAfter" required>
+                <input name="timeAfter" required maxlength="160">
               </label>
             </div>
             <label>Resultado
-              <textarea name="result" rows="3" required></textarea>
+              <textarea name="result" rows="3" required maxlength="2400"></textarea>
             </label>
             <label>Correcciones humanas necesarias
-              <textarea name="humanCorrections" rows="3" required></textarea>
+              <textarea name="humanCorrections" rows="3" required maxlength="2400"></textarea>
             </label>
             <label>Aprendizaje
-              <textarea name="learning" rows="3" required></textarea>
+              <textarea name="learning" rows="3" required maxlength="2400"></textarea>
             </label>
             <label>Proximo ajuste
-              <textarea name="nextAdjustment" rows="3" required></textarea>
+              <textarea name="nextAdjustment" rows="3" required maxlength="2400"></textarea>
             </label>
             <button class="primary-action" type="submit">Guardar experimento</button>
           </form>
@@ -300,23 +300,23 @@
           <form class="module-form" data-module="manifesto">
             <div class="form-grid">
               <label>Que voy a delegar
-                <textarea name="willDelegate" rows="3" required></textarea>
+                <textarea name="willDelegate" rows="3" required maxlength="2400"></textarea>
               </label>
               <label>Que voy a preservar
-                <textarea name="willPreserve" rows="3" required></textarea>
+                <textarea name="willPreserve" rows="3" required maxlength="2400"></textarea>
               </label>
               <label>Limite etico que voy a respetar
-                <textarea name="ethicalLimit" rows="3" required></textarea>
+                <textarea name="ethicalLimit" rows="3" required maxlength="2400"></textarea>
               </label>
               <label>Como voy a verificar resultados
-                <textarea name="verificationPractice" rows="3" required></textarea>
+                <textarea name="verificationPractice" rows="3" required maxlength="2400"></textarea>
               </label>
             </div>
             <label>Compromiso de practica por 30 dias
-              <textarea name="thirtyDayCommitment" rows="3" required></textarea>
+              <textarea name="thirtyDayCommitment" rows="3" required maxlength="2400"></textarea>
             </label>
             <label>Firma textual
-              <input name="signature" required placeholder="Escribi tu nombre completo">
+              <input name="signature" required placeholder="Escribi tu nombre completo" maxlength="160">
             </label>
             <button class="primary-action" type="submit">Firmar manifiesto</button>
           </form>

@@ -21,11 +21,24 @@ const MODULE_SEQUENCE = [
   "summary"
 ];
 
+const MODULE_FIELDS = {
+  profile: ["fullName", "email", "phone", "age", "role", "industry", "aiExperience", "participantType", "personalGoal"],
+  thermometer1: ["repetitiveTasks", "frequency", "weeklyTime", "energyDrain", "delegationRisk", "humanCriteria"],
+  thermometer2: ["fearLagging", "fearBadDelegation", "overload", "experimentConfidence", "opportunity"],
+  case: ["realProblem", "context", "currentInput", "expectedOutput", "aiAssistance", "humanDecision", "aiBoundary", "risks"],
+  flow: ["currentFlow", "newFlow", "delegatedStep", "supervisedStep", "preservedStep", "improvementMetric"],
+  experiment: ["testedAction", "toolUsed", "timeBefore", "timeAfter", "result", "humanCorrections", "learning", "nextAdjustment"],
+  manifesto: ["willDelegate", "willPreserve", "ethicalLimit", "verificationPractice", "thirtyDayCommitment", "signature"]
+};
+
+const STORAGE_SCHEMA_VERSION = "2";
+
 const STORAGE_KEYS = {
   participantId: "cursoiaParticipantId",
   modules: "cursoiaModules",
   queue: "cursoiaQueue",
-  audience: "cursoiaAudience"
+  audience: "cursoiaAudience",
+  schemaVersion: "cursoiaSchemaVersion"
 };
 
 const statusEl = document.querySelector("#status");
@@ -191,6 +204,40 @@ const formToPayload = (form) => {
   return payload;
 };
 
+const filterModulePayload = (moduleId, payload = {}) => {
+  const fields = MODULE_FIELDS[moduleId] || [];
+  return fields.reduce((filtered, field) => {
+    filtered[field] = payload[field] ?? "";
+    return filtered;
+  }, {});
+};
+
+const migrateLocalState = () => {
+  if (localStorage.getItem(STORAGE_KEYS.schemaVersion) === STORAGE_SCHEMA_VERSION) return;
+
+  const modules = readModules();
+  let changed = false;
+
+  Object.entries(modules).forEach(([moduleId, state]) => {
+    if (!MODULE_FIELDS[moduleId] || !state?.payload) return;
+    modules[moduleId] = {
+      ...state,
+      payload: filterModulePayload(moduleId, state.payload)
+    };
+    changed = true;
+  });
+
+  if (changed) {
+    writeJson(STORAGE_KEYS.modules, modules);
+  }
+
+  writeQueue(compactQueue(readQueue()).map((item) => ({
+    ...item,
+    payload: MODULE_FIELDS[item.module] ? filterModulePayload(item.module, item.payload || {}) : item.payload
+  })));
+  localStorage.setItem(STORAGE_KEYS.schemaVersion, STORAGE_SCHEMA_VERSION);
+};
+
 const fillForm = (form, payload = {}) => {
   [...form.elements].forEach((field) => {
     if (!field.name) return;
@@ -206,6 +253,7 @@ const buildEnvelope = (moduleId, payload) => {
   const storedProfile = readModules().profile?.payload || {};
   const basePayload = moduleId === "profile" ? payload : storedProfile;
   const acceptedConsent = payload.consent === true || basePayload.consent === true;
+  const modulePayload = filterModulePayload(moduleId, payload);
   const compatibilityPayload = {
     ...basePayload,
     ...payload,
@@ -237,7 +285,7 @@ const buildEnvelope = (moduleId, payload) => {
     appVersion,
     consent: compatibilityPayload.consent,
     consentimiento: compatibilityPayload.consentimiento,
-    payload: compatibilityPayload
+    payload: modulePayload
   };
 };
 
@@ -588,6 +636,7 @@ if ("serviceWorker" in navigator) {
   });
 }
 
+migrateLocalState();
 getParticipantId();
 prepareInlineContinueButtons();
 renderCaptureCopy();

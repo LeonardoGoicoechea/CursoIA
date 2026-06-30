@@ -49,7 +49,7 @@ Editar `config.js`:
 ```js
 window.COURSE_REGISTRATION_CONFIG = {
   googleAppsScriptUrl: "https://script.google.com/macros/s/DEPLOYMENT_ID/exec",
-  apiToken: "",
+  apiToken: "PEGAR_TOKEN_LARGO_AQUI",
   requestTimeoutMs: 12000,
   appVersion: "1.0.0",
   releaseDates: {}
@@ -57,7 +57,7 @@ window.COURSE_REGISTRATION_CONFIG = {
 ```
 
 - `googleAppsScriptUrl`: URL `/exec` del despliegue Web App.
-- `apiToken`: token opcional. Si se usa, debe coincidir con `EXPECTED_TOKEN` en Apps Script.
+- `apiToken`: obligatorio en produccion. Debe coincidir con la Script Property `CURSOIA_API_TOKEN`.
 - `requestTimeoutMs`: espera maxima de cada envio.
 - `appVersion`: version enviada en cada payload.
 - `releaseDates`: reservado para liberar modulos por fecha en una version futura.
@@ -92,7 +92,7 @@ El Apps Script crea y usa estas pestanas:
 - `Manifiestos`
 - `Eventos`
 
-Pegar `scripts/google-apps-script.js` en Google Apps Script, ajustar `SPREADSHEET_ID`, desplegar como Web App y copiar la URL `/exec` en `config.js`.
+Pegar `scripts/google-apps-script.js` en Google Apps Script, configurar `CURSOIA_SPREADSHEET_ID` y `CURSOIA_API_TOKEN` como Script properties, desplegar como Web App y copiar la URL `/exec` en `config.js`.
 
 ## Privacidad
 
@@ -137,3 +137,69 @@ Publicar desde rama `main`, carpeta raiz.
 - Si se agregan assets, actualizar `sw.js`.
 - Si cambia la URL de Apps Script, actualizar `config.js`.
 - Si se cambia `sw.js`, subir version de `CACHE_NAME` para forzar cache nuevo.
+## Configuracion segura de Apps Script
+
+En el proyecto de Apps Script, abrir **Project Settings > Script properties** y crear:
+
+```text
+CURSOIA_SPREADSHEET_ID = ID_DE_LA_PLANILLA
+CURSOIA_API_TOKEN = MISMO_TOKEN_DE_config.js
+```
+
+El backend lee esos valores con `PropertiesService`; no deben quedar hardcodeados en `scripts/google-apps-script.js`.
+
+Para rotar el token:
+
+1. Generar un token nuevo:
+
+   ```powershell
+   node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
+   ```
+
+2. Reemplazar `apiToken` en `config.js`.
+3. Reemplazar `CURSOIA_API_TOKEN` en Script properties.
+4. Publicar una nueva version del Web App si corresponde.
+5. Subir `appVersion` y `CACHE_NAME` para que la PWA tome la version nueva.
+
+## QA manual minimo
+
+1. Ejecutar la app local:
+
+   ```powershell
+   python -m http.server 8002 --bind 127.0.0.1
+   ```
+
+2. Abrir `http://127.0.0.1:8002/` en una ventana privada o despues de limpiar service workers.
+3. Completar el perfil y al menos un modulo del recorrido.
+4. Desconectar internet, completar otro modulo y confirmar que queda guardado localmente.
+5. Reconectar internet, usar **Sincronizar** y confirmar que desaparece la cola pendiente.
+6. Revisar en Google Sheets que se haya creado o actualizado la hoja correspondiente.
+7. Confirmar que `appVersion`, `participantId`, `submissionId` y `payloadJson` quedaron registrados.
+
+## Recuperacion
+
+1. En Chrome DevTools, abrir **Application > Service Workers** y usar **Unregister** para el dominio publicado.
+2. En **Application > Storage**, usar **Clear site data**.
+3. Recargar con hard refresh.
+4. Si solo se necesita reenviar datos pendientes, abrir la app online y usar **Sincronizar** antes de borrar datos locales.
+5. Si la cola quedo inconsistente, exportar o capturar los datos visibles del resumen antes de usar **Reiniciar**.
+
+## Prueba minima
+
+Ejecutar:
+
+```powershell
+node tools/smoke-test.js
+```
+
+La prueba verifica que los formularios principales existan, que los campos esperados tengan `maxlength`, que la app conserve persistencia/sincronizacion y que `config.js` tenga endpoint y token configurados.
+
+Para una comprobacion visual rapida con Playwright:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/playwright-check.ps1 -Url http://127.0.0.1:8002/
+```
+
+## Contrato de datos
+
+La matriz completa de modulos, hojas, campos y limites esta en `docs/field-matrix.md`. Si se agrega o renombra un campo, actualizar `index.html`, `app.js`, `scripts/google-apps-script.js`, la matriz y luego ejecutar `node tools/smoke-test.js`.
