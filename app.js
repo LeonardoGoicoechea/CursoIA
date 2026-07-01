@@ -49,7 +49,6 @@ const summaryListEl = document.querySelector("#summaryList");
 const installButton = document.querySelector("#installButton");
 const syncButton = document.querySelector("#syncButton");
 const resetButton = document.querySelector("#resetButton");
-const syncAccessStateEl = document.querySelector("#syncAccessState");
 const captureCopyEl = document.querySelector("#captureCopy");
 const navLinks = [...document.querySelectorAll("[data-target]")];
 const views = [...document.querySelectorAll("[data-module-view]")];
@@ -94,12 +93,6 @@ const writeJson = (key, value) => {
 const syncRequirementMessage = () => {
   if (!endpointConfigured()) return "Sincronizacion no configurada en este despliegue.";
   return "Acceso abierto. Cualquier persona puede usar la app y sincronizar sin iniciar sesion.";
-};
-
-const renderSyncAccessState = () => {
-  if (syncAccessStateEl) {
-    syncAccessStateEl.textContent = syncRequirementMessage();
-  }
 };
 
 const getParticipantId = () => {
@@ -638,7 +631,6 @@ resetButton?.addEventListener("click", () => {
   Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key));
   getParticipantId();
   hydrateForms();
-  renderSyncAccessState();
   renderProgress();
   setStatus("Datos locales reiniciados.", "warning");
 });
@@ -676,7 +668,6 @@ getParticipantId();
 prepareInlineContinueButtons();
 renderCaptureCopy();
 hydrateForms();
-renderSyncAccessState();
 refreshStoredQueue();
 renderProgress();
 

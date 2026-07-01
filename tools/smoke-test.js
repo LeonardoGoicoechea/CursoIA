@@ -57,13 +57,13 @@ for (const moduleId of expectedModules) {
   }
 }
 
-assert(html.includes('id="syncAccessState"'), "Missing public sync state container");
+assert(!html.includes("sync-config-panel"), "Sync config panel should not be rendered");
 
 assert(app.includes("localStorage.setItem"), "app.js does not persist locally");
 assert(app.includes("fetch("), "app.js does not sync with fetch");
 assert(app.includes("AbortController"), "app.js does not enforce request timeout");
 assert(app.includes("navigator.serviceWorker.register"), "app.js does not register service worker");
-assert(app.includes("syncAccessState"), "app.js must expose public sync state");
+assert(!app.includes("syncAccessState"), "app.js must not reference removed sync state UI");
 assert(!app.includes("google.accounts.id"), "app.js must not require Google Sign-In");
 
 const sandbox = { window: {} };
