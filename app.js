@@ -31,7 +31,7 @@ const MODULE_FIELDS = {
   manifesto: ["willDelegate", "willPreserve", "ethicalLimit", "verificationPractice", "thirtyDayCommitment", "signature"]
 };
 
-const STORAGE_SCHEMA_VERSION = "5";
+const STORAGE_SCHEMA_VERSION = "6";
 
 const STORAGE_KEYS = {
   participantId: "cursoiaParticipantId",
@@ -49,12 +49,15 @@ const summaryListEl = document.querySelector("#summaryList");
 const installButton = document.querySelector("#installButton");
 const syncButton = document.querySelector("#syncButton");
 const resetButton = document.querySelector("#resetButton");
+const exportPendingButton = document.querySelector("#exportPendingButton");
 const captureCopyEl = document.querySelector("#captureCopy");
 const navLinks = [...document.querySelectorAll("[data-target]")];
 const views = [...document.querySelectorAll("[data-module-view]")];
 
 let deferredInstallPrompt = null;
 let syncing = false;
+let volatileParticipantId = "";
+let storageWarningShown = false;
 
 const captureCopy = {
   leader: {
@@ -78,16 +81,50 @@ const createId = () =>
 
 const isAcceptedConsent = (value) => value === true || value === "true";
 
+const escapeHtml = (value = "") => String(value).replace(/[&<>"]/g, (character) => ({
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  "\"": "&quot;"
+})[character]);
+
+const safeGetItem = (key) => {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const safeSetItem = (key, value) => {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch {
+    storageWarningShown = true;
+    return false;
+  }
+};
+
+const safeRemoveItem = (key) => {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    storageWarningShown = true;
+  }
+};
+
 const readJson = (key, fallback) => {
   try {
-    return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback));
+    const raw = safeGetItem(key);
+    return raw ? JSON.parse(raw) : fallback;
   } catch {
     return fallback;
   }
 };
 
 const writeJson = (key, value) => {
-  localStorage.setItem(key, JSON.stringify(value));
+  return safeSetItem(key, JSON.stringify(value));
 };
 
 const syncRequirementMessage = () => {
@@ -96,10 +133,13 @@ const syncRequirementMessage = () => {
 };
 
 const getParticipantId = () => {
-  const existing = localStorage.getItem(STORAGE_KEYS.participantId);
+  const existing = safeGetItem(STORAGE_KEYS.participantId);
   if (existing) return existing;
+  if (volatileParticipantId) return volatileParticipantId;
   const created = createId();
-  localStorage.setItem(STORAGE_KEYS.participantId, created);
+  if (!safeSetItem(STORAGE_KEYS.participantId, created)) {
+    volatileParticipantId = created;
+  }
   return created;
 };
 
@@ -107,6 +147,17 @@ const setStatus = (message, tone = "info") => {
   statusEl.textContent = message;
   statusEl.className = `status ${tone}`;
 };
+
+const markStorageWarningIfNeeded = () => {
+  if (storageWarningShown) {
+    setStatus("El navegador no permite guardar datos locales de forma confiable. Exporta tus respuestas antes de cerrar.", "warning");
+  }
+};
+
+const isBackendValidationError = (message = "") =>
+  /Modulo desconocido|Payload|Faltan identificadores|Campos no permitidos|Campo obligatorio|Tipo invalido|Formato invalido|Valor no permitido|demasiado grande/i.test(message);
+
+const isPermanentSyncError = (error) => error?.retryable === false;
 
 const endpointConfigured = () =>
   typeof CONFIG.googleAppsScriptUrl === "string" && CONFIG.googleAppsScriptUrl.startsWith("https://");
@@ -124,7 +175,7 @@ const nextViewForModule = (moduleId) => {
 };
 
 const isModuleComplete = (state) =>
-  state?.status === "completed" && ["synced", "pending", "local"].includes(state?.syncStatus);
+  state?.status === "completed" && ["synced", "pending", "local", "error"].includes(state?.syncStatus);
 
 const firstPendingView = () => {
   const modules = readModules();
@@ -224,7 +275,7 @@ const filterModulePayload = (moduleId, payload = {}) => {
 };
 
 const migrateLocalState = () => {
-  if (localStorage.getItem(STORAGE_KEYS.schemaVersion) === STORAGE_SCHEMA_VERSION) return;
+  if (safeGetItem(STORAGE_KEYS.schemaVersion) === STORAGE_SCHEMA_VERSION) return;
 
   const modules = readModules();
   let changed = false;
@@ -246,9 +297,9 @@ const migrateLocalState = () => {
     ...item,
     payload: MODULE_FIELDS[item.module] ? filterModulePayload(item.module, item.payload || {}) : item.payload
   })));
-  localStorage.removeItem(STORAGE_KEYS.syncToken);
-  localStorage.removeItem(STORAGE_KEYS.syncSession);
-  localStorage.setItem(STORAGE_KEYS.schemaVersion, STORAGE_SCHEMA_VERSION);
+  safeRemoveItem(STORAGE_KEYS.syncToken);
+  safeRemoveItem(STORAGE_KEYS.syncSession);
+  safeSetItem(STORAGE_KEYS.schemaVersion, STORAGE_SCHEMA_VERSION);
 };
 
 const fillForm = (form, payload = {}) => {
@@ -266,7 +317,7 @@ const buildEnvelope = (moduleId, payload) => {
   const submissionId = createId();
   const participantId = getParticipantId();
   const timestamp = nowIso();
-  const appVersion = CONFIG.appVersion || "1.0.0";
+  const appVersion = CONFIG.appVersion || "unknown";
   const storedProfile = readModules().profile?.payload || {};
   const basePayload = moduleId === "profile" ? payload : storedProfile;
   const acceptedConsent = isAcceptedConsent(payload.consent) || isAcceptedConsent(basePayload.consent);
@@ -342,7 +393,9 @@ const sendEnvelope = async (envelope) => {
     const text = await response.text();
     const result = text ? JSON.parse(text) : {};
     if (!response.ok || result.ok === false) {
-      throw new Error(result.error || "No se pudo guardar en Google Sheets.");
+      const error = new Error(result.error || "No se pudo guardar en Google Sheets.");
+      error.retryable = !isBackendValidationError(error.message);
+      throw error;
     }
     return result;
   } finally {
@@ -357,6 +410,7 @@ const syncQueue = async () => {
 
   syncing = true;
   const remaining = [];
+  let permanentFailures = 0;
 
   for (let index = 0; index < queue.length; index += 1) {
     const item = queue[index];
@@ -370,6 +424,15 @@ const syncQueue = async () => {
         syncedAt: nowIso()
       });
     } catch (error) {
+      if (isPermanentSyncError(error)) {
+        permanentFailures += 1;
+        writeModuleState(item.module, {
+          status: "completed",
+          syncStatus: "error",
+          lastSyncError: error.message || "Error permanente de sincronizacion."
+        });
+        continue;
+      }
       remaining.push(item);
     }
   }
@@ -377,7 +440,9 @@ const syncQueue = async () => {
   writeQueue(remaining);
   syncing = false;
 
-  if (remaining.length === 0) {
+  if (permanentFailures > 0) {
+    setStatus(`${permanentFailures} envio(s) no se pueden sincronizar por validacion. Exporta pendientes para respaldo.`, "error");
+  } else if (remaining.length === 0) {
     setStatus("Registros pendientes sincronizados.", "success");
   } else {
     setStatus(`Quedan ${remaining.length} envios pendientes de sincronizar.`, "warning");
@@ -395,7 +460,7 @@ const saveModule = async (moduleId, payload) => {
   });
 
   if (moduleId === "profile") {
-    localStorage.setItem(STORAGE_KEYS.participantId, getParticipantId());
+    safeSetItem(STORAGE_KEYS.participantId, getParticipantId());
   }
 
   const envelope = buildEnvelope(moduleId, payload);
@@ -417,6 +482,16 @@ const saveModule = async (moduleId, payload) => {
     setStatus(`${meta.label} guardado y sincronizado.`, "success");
     await syncQueue();
   } catch (error) {
+    if (isPermanentSyncError(error)) {
+      writeModuleState(moduleId, {
+        status: "completed",
+        syncStatus: "error",
+        payload,
+        lastSyncError: error.message || "Error permanente de sincronizacion."
+      });
+      setStatus(`${meta.label} guardado localmente, pero no se puede sincronizar: ${error.message}`, "error");
+      return;
+    }
     enqueue(envelope);
     const reason = navigator.onLine ? error.message : "Sin conexion.";
     setStatus(`${meta.label} guardado localmente. ${reason}`, "warning");
@@ -492,7 +567,8 @@ const prepareInlineContinueButtons = () => {
 };
 
 const renderCaptureCopy = () => {
-  const audience = localStorage.getItem(STORAGE_KEYS.audience) || "leader";
+  const storedAudience = safeGetItem(STORAGE_KEYS.audience) || "leader";
+  const audience = captureCopy[storedAudience] ? storedAudience : "leader";
   const copy = captureCopy[audience];
   captureCopyEl.innerHTML = `
     <h3>${copy.title}</h3>
@@ -508,6 +584,7 @@ const renderCaptureCopy = () => {
 const stateLabel = (state) => {
   if (!state) return "pendiente";
   if (state.syncStatus === "synced") return "sincronizado";
+  if (state.syncStatus === "error") return "error sync";
   if (state.syncStatus === "pending") return "pendiente sync";
   if (state.status === "completed") return "local";
   return "pendiente";
@@ -540,12 +617,13 @@ const renderSummary = () => {
   summaryListEl.innerHTML = MODULES.map((item) => {
     const state = modules[item.id];
     const label = stateLabel(state);
-    const badgeClass = state?.syncStatus === "synced" ? "synced" : state?.status === "completed" ? "pending" : "";
+    const badgeClass = state?.syncStatus === "synced" ? "synced" : state?.syncStatus === "error" ? "error" : state?.status === "completed" ? "pending" : "";
     return `
       <div class="summary-item">
         <div>
           <strong>${item.label}</strong>
           <span>${state?.updatedAt ? `Ultima actualizacion: ${new Date(state.updatedAt).toLocaleString()}` : "Sin completar"}</span>
+          ${state?.lastSyncError ? `<span>Error: ${escapeHtml(state.lastSyncError)}</span>` : ""}
         </div>
         <span class="badge ${badgeClass}">${label}</span>
       </div>
@@ -612,7 +690,7 @@ document.querySelectorAll("[data-jump]").forEach((button) => {
 
 document.querySelectorAll("[data-audience]").forEach((button) => {
   button.addEventListener("click", () => {
-    localStorage.setItem(STORAGE_KEYS.audience, button.dataset.audience);
+    safeSetItem(STORAGE_KEYS.audience, button.dataset.audience);
     renderCaptureCopy();
   });
 });
@@ -625,10 +703,32 @@ syncButton?.addEventListener("click", () => {
   syncQueue();
 });
 
+exportPendingButton?.addEventListener("click", () => {
+  const modules = readModules();
+  const erroredModules = Object.fromEntries(
+    Object.entries(modules).filter(([, state]) => state?.syncStatus === "error")
+  );
+  const exportData = {
+    exportedAt: nowIso(),
+    participantId: getParticipantId(),
+    queue: readQueue(),
+    erroredModules
+  };
+  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `cursoia-pendientes-${Date.now()}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+  setStatus("Pendientes exportados como respaldo JSON.", "success");
+});
+
 resetButton?.addEventListener("click", () => {
   const confirmed = window.confirm("Esto borra los datos locales de este dispositivo. Continuar?");
   if (!confirmed) return;
-  Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key));
+  Object.values(STORAGE_KEYS).forEach((key) => safeRemoveItem(key));
+  volatileParticipantId = "";
   getParticipantId();
   hydrateForms();
   renderProgress();
@@ -670,6 +770,7 @@ renderCaptureCopy();
 hydrateForms();
 refreshStoredQueue();
 renderProgress();
+markStorageWarningIfNeeded();
 
 if (!endpointConfigured()) {
   setStatus("Sin endpoint de sincronizacion. Los avances se guardaran localmente en este dispositivo.", "warning");

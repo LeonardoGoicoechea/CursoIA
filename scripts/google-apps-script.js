@@ -6,6 +6,8 @@ const DEFAULT_MAX_LENGTH = 1200;
 const SHORT_TEXT_MAX_LENGTH = 160;
 const LONG_TEXT_MAX_LENGTH = 2400;
 const MAX_PAYLOAD_JSON_LENGTH = 30000;
+const MAX_REQUEST_JSON_LENGTH = 40000;
+const FORMULA_PREFIX_PATTERN = /^[=+\-@]/;
 
 const MODULES = {
   profile: {
@@ -58,24 +60,24 @@ const BASE_HEADERS = ["savedAt", "timestamp", "submissionId", "participantId", "
 const FIELD_RULES = {
   fullName: { type: "string", maxLength: SHORT_TEXT_MAX_LENGTH, required: true },
   email: { type: "string", maxLength: 254, required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
-  phone: { type: "string", maxLength: 40 },
-  age: { type: "string", maxLength: 20 },
+  phone: { type: "string", maxLength: 40, required: true },
+  age: { type: "string", maxLength: 20, required: true, pattern: /^(1[3-9]|[2-9][0-9])$/ },
   role: { type: "string", maxLength: SHORT_TEXT_MAX_LENGTH, required: true },
   industry: { type: "string", maxLength: SHORT_TEXT_MAX_LENGTH, required: true },
-  aiExperience: { type: "string", maxLength: SHORT_TEXT_MAX_LENGTH, required: true },
-  participantType: { type: "string", maxLength: SHORT_TEXT_MAX_LENGTH, required: true },
+  aiExperience: { type: "string", maxLength: SHORT_TEXT_MAX_LENGTH, required: true, allowed: ["Sin uso previo", "Uso ocasional", "Uso semanal", "Uso frecuente"] },
+  participantType: { type: "string", maxLength: SHORT_TEXT_MAX_LENGTH, required: true, allowed: ["leader", "professional"] },
   personalGoal: { type: "string", maxLength: DEFAULT_MAX_LENGTH, required: true },
   consent: { type: "string", maxLength: 5, required: true, pattern: /^(true)$/ },
   repetitiveTasks: { type: "string", maxLength: LONG_TEXT_MAX_LENGTH, required: true },
-  frequency: { type: "string", maxLength: SHORT_TEXT_MAX_LENGTH, required: true },
+  frequency: { type: "string", maxLength: SHORT_TEXT_MAX_LENGTH, required: true, allowed: ["Todos los dias", "Varias veces por semana", "Una vez por semana", "Algunas veces por mes"] },
   weeklyTime: { type: "string", maxLength: SHORT_TEXT_MAX_LENGTH, required: true },
-  energyDrain: { type: "string", maxLength: DEFAULT_MAX_LENGTH, required: true },
-  delegationRisk: { type: "string", maxLength: DEFAULT_MAX_LENGTH, required: true },
+  energyDrain: { type: "string", maxLength: DEFAULT_MAX_LENGTH, required: true, pattern: /^[1-5]$/ },
+  delegationRisk: { type: "string", maxLength: DEFAULT_MAX_LENGTH, required: true, pattern: /^[1-5]$/ },
   humanCriteria: { type: "string", maxLength: DEFAULT_MAX_LENGTH, required: true },
-  fearLagging: { type: "string", maxLength: SHORT_TEXT_MAX_LENGTH, required: true },
-  fearBadDelegation: { type: "string", maxLength: SHORT_TEXT_MAX_LENGTH, required: true },
-  overload: { type: "string", maxLength: SHORT_TEXT_MAX_LENGTH, required: true },
-  experimentConfidence: { type: "string", maxLength: SHORT_TEXT_MAX_LENGTH, required: true },
+  fearLagging: { type: "string", maxLength: SHORT_TEXT_MAX_LENGTH, required: true, pattern: /^[1-5]$/ },
+  fearBadDelegation: { type: "string", maxLength: SHORT_TEXT_MAX_LENGTH, required: true, pattern: /^[1-5]$/ },
+  overload: { type: "string", maxLength: SHORT_TEXT_MAX_LENGTH, required: true, pattern: /^[1-5]$/ },
+  experimentConfidence: { type: "string", maxLength: SHORT_TEXT_MAX_LENGTH, required: true, pattern: /^[1-5]$/ },
   opportunity: { type: "string", maxLength: DEFAULT_MAX_LENGTH, required: true },
   realProblem: { type: "string", maxLength: LONG_TEXT_MAX_LENGTH, required: true },
   context: { type: "string", maxLength: LONG_TEXT_MAX_LENGTH, required: true },
@@ -123,12 +125,20 @@ function doPost(event) {
   const lock = LockService.getScriptLock();
 
   try {
-    lock.waitLock(10000);
     const data = parseRequest(event);
     const moduleConfig = validateModule(data);
     data.payload = validatePayload(data.payload, moduleConfig.fields);
+    lock.waitLock(10000);
     const sheet = getSheet(moduleConfig.sheet);
     ensureHeaders(sheet, moduleConfig.fields);
+    if (submissionExists(sheet, data.submissionId)) {
+      return jsonResponse({
+        ok: true,
+        duplicate: true,
+        module: data.module,
+        savedAt
+      });
+    }
     sheet.appendRow(buildRow(data, moduleConfig.fields, savedAt));
 
     return jsonResponse({
@@ -155,6 +165,10 @@ function doPost(event) {
 function parseRequest(event) {
   if (!event || !event.postData || !event.postData.contents) {
     throw new Error("Payload vacio.");
+  }
+
+  if (event.postData.contents.length > MAX_REQUEST_JSON_LENGTH) {
+    throw new Error("Payload demasiado grande.");
   }
 
   try {
@@ -210,10 +224,25 @@ function validatePayload(payload, allowedFields) {
     if (rule.pattern && !rule.pattern.test(value)) {
       throw new Error("Formato invalido para " + field + ".");
     }
+    if (rule.allowed && rule.allowed.indexOf(value) === -1) {
+      throw new Error("Valor no permitido para " + field + ".");
+    }
 
-    validated[field] = value;
+    validated[field] = sanitizeSheetValue(value);
     return validated;
   }, {});
+}
+
+function sanitizeSheetValue(value) {
+  return FORMULA_PREFIX_PATTERN.test(value) ? "'" + value : value;
+}
+
+function submissionExists(sheet, submissionId) {
+  if (sheet.getLastRow() < 2) return false;
+  const values = sheet.getRange(2, 3, sheet.getLastRow() - 1, 1).getValues();
+  return values.some(function(row) {
+    return row[0] === submissionId;
+  });
 }
 
 function getSheet(sheetName) {

@@ -34,10 +34,13 @@ Cada envio agrega:
 - `consent`: valor obligatorio `true`.
 - Campos cortos: 160 caracteres.
 - Telefono: 40 caracteres.
-- Edad: 20 caracteres.
+- Edad: obligatoria, entre 13 y 99.
+- Escalas numericas: valores `1` a `5`.
+- Selects cerrados: solo valores publicados en `index.html` y `scripts/google-apps-script.js`.
 - Campos de desarrollo medio: 1200 caracteres.
 - Campos largos de reflexion/caso/flujo/experimento/manifiesto: 2400 caracteres.
 - `payloadJson`: maximo 30000 caracteres.
+- Valores que empiecen con `=`, `+`, `-` o `@`: se guardan con apostrofe inicial para evitar formulas en Sheets.
 
 Si se agrega o renombra un campo, actualizar en este orden:
 

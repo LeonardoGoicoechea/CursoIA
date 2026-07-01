@@ -131,7 +131,7 @@ Luego agrega columnas especificas de cada modulo y una columna `payloadJson` con
   "module": "profile",
   "participantId": "uuid",
   "timestamp": "2026-06-28T00:00:00.000Z",
-  "appVersion": "1.0.0",
+  "appVersion": "1.4.0",
   "payload": {
     "fullName": "Nombre",
     "consent": "true"
@@ -144,6 +144,17 @@ Respuesta correcta:
 ```json
 {
   "ok": true,
+  "module": "profile",
+  "savedAt": "2026-06-28T00:00:00.000Z"
+}
+```
+
+Respuesta correcta para un reintento ya guardado:
+
+```json
+{
+  "ok": true,
+  "duplicate": true,
   "module": "profile",
   "savedAt": "2026-06-28T00:00:00.000Z"
 }
@@ -190,6 +201,7 @@ Respuesta con error:
 ## Robustez
 
 - `LockService` evita escrituras simultaneas conflictivas.
+- `submissionId` se usa para idempotencia: si un reintento llega despues de una escritura exitosa, no agrega otra fila.
 - Las pestanas se crean si no existen.
 - Los encabezados se escriben si la pestana esta vacia.
 - El payload completo se guarda en `payloadJson` para auditoria y cambios futuros.
@@ -197,6 +209,8 @@ Respuesta con error:
 ## Validacion y seguridad
 
 - El backend rechaza modulos desconocidos, campos no permitidos, tipos no textuales, campos obligatorios vacios y textos que superen los limites definidos.
+- El backend rechaza edades fuera de 13-99, escalas fuera de 1-5 y valores que no pertenezcan a selects conocidos.
+- Los valores que empiezan con `=`, `+`, `-` o `@` se guardan como texto para evitar formulas ejecutables en Sheets.
 - `CURSOIA_SPREADSHEET_ID` se lee desde `PropertiesService`, no desde constantes hardcodeadas.
 - El Web App queda abierto a cualquier persona que conozca la URL `/exec`; eso simplifica el acceso pero no sirve para datos sensibles.
 - La matriz completa de campos, hojas y limites esta en `docs/field-matrix.md`.
@@ -205,22 +219,26 @@ Respuesta con error:
 
 1. Actualizar `CURSOIA_SPREADSHEET_ID` en Script properties si cambia la planilla destino.
 2. Si cambia la URL del Web App, actualizar `googleAppsScriptUrl` en `config.js`.
-3. Subir `appVersion` para invalidar el cache general; `config.js` usa `network-first`, asi que online deberia captar el cambio aun antes del recache completo.
+3. Subir `appVersion` y `CACHE_NAME` para invalidar el cache general; el service worker usa red primero y cache solo como fallback offline.
 4. Probar un envio real y verificar la hoja correspondiente.
 
 ## Checklist QA de sincronizacion
 
-1. Abrir la app y confirmar que el panel superior indique acceso abierto.
-2. Completar `profile` con conexion activa y verificar la hoja `Perfiles`.
-3. Cortar conexion, completar otro modulo y confirmar que la app informa guardado local.
-4. Restaurar conexion y presionar **Sincronizar**.
-5. Confirmar que la cola pendiente queda vacia.
-6. Revisar en Sheets `savedAt`, `timestamp`, `submissionId`, `participantId`, `module`, `appVersion` y `payloadJson`.
-7. Enviar un payload con `module` invalido y confirmar que responde `ok: false`.
+1. Abrir la app y confirmar que no pida login ni clave.
+2. Confirmar que se muestre el aviso de no cargar informacion sensible.
+3. Completar `profile` con conexion activa y verificar la hoja `Perfiles`.
+4. Cortar conexion, completar otro modulo y confirmar que la app informa guardado local.
+5. Restaurar conexion y presionar **Sincronizar**.
+6. Confirmar que la cola pendiente queda vacia.
+7. Reenviar un mismo `submissionId` en un entorno de prueba y confirmar que responde `duplicate: true` sin duplicar fila.
+8. Enviar un valor que empiece con `=` en un entorno de prueba y confirmar que queda como texto.
+9. Enviar un payload con `module` invalido y confirmar que responde `ok: false`.
+10. Revisar en Sheets `savedAt`, `timestamp`, `submissionId`, `participantId`, `module`, `appVersion` y `payloadJson`.
 
 ## Recuperacion operativa
 
 - Para cache o UI vieja: desregistrar el service worker y limpiar storage del sitio desde DevTools.
 - Para reenviar cola pendiente: abrir la app online y presionar **Sincronizar** antes de limpiar datos.
+- Para conservar evidencia antes de borrar datos locales: usar **Exportar pendientes** desde el cierre.
 - Para reinicio total: usar **Reiniciar** en la app o borrar `localStorage` del sitio.
 - Para auditoria: revisar `payloadJson` en Sheets; contiene el objeto validado que recibio el backend.

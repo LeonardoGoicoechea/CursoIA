@@ -1,7 +1,7 @@
 {
   "name": "CursoIA",
   "short_name": "CursoIA",
-  "description": "Formulario PWA para registrarse a un curso de inteligencia artificial.",
+  "description": "Bitacora PWA para acompanar un taller de IA con criterio humano.",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#050706",

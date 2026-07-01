@@ -334,6 +334,17 @@ h3 {
   color: var(--muted);
 }
 
+.module-heading .privacy-note {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(200, 155, 42, 0.55);
+  border-radius: 5px;
+  background: rgba(200, 155, 42, 0.1);
+  color: #ffd166;
+  font-family: "Courier New", ui-monospace, monospace;
+  font-weight: 800;
+}
+
 .audience-switch {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -551,6 +562,11 @@ select option {
 .badge.pending {
   border-color: rgba(200, 155, 42, 0.58);
   color: #ffd166;
+}
+
+.badge.error {
+  border-color: rgba(255, 138, 128, 0.58);
+  color: var(--red);
 }
 
 @media (max-width: 900px) {

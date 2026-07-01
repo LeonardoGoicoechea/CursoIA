@@ -50,7 +50,7 @@ Editar `config.js`:
 window.COURSE_REGISTRATION_CONFIG = {
   googleAppsScriptUrl: "https://script.google.com/macros/s/DEPLOYMENT_ID/exec",
   requestTimeoutMs: 12000,
-  appVersion: "1.0.0",
+  appVersion: "1.4.0",
   releaseDates: {}
 };
 ```
@@ -70,12 +70,12 @@ Cada modulo envia un sobre comun:
   "module": "profile",
   "participantId": "id persistente del dispositivo",
   "timestamp": "fecha ISO",
-  "appVersion": "1.0.0",
+  "appVersion": "1.4.0",
   "payload": {}
 }
 ```
 
-Si no hay conexion o falla el endpoint, el sobre queda en `localStorage` y se reintenta al volver online.
+Si no hay conexion o falla el endpoint de forma temporal, el sobre queda en `localStorage` y se reintenta al volver online. Si el backend rechaza un payload por validacion permanente, la app lo marca como `error sync` y permite exportar pendientes como JSON desde el cierre.
 
 ## Google Sheets
 
@@ -100,19 +100,21 @@ La app muestra un aviso minimo:
 No ingreses nombres reales de clientes, pacientes, empleados ni informacion confidencial. Usa ejemplos anonimizados.
 ```
 
-La app no pide login ni clave y la sincronizacion queda abierta para cualquier persona que tenga la URL del Web App. Tampoco hay cifrado local. No debe usarse para recolectar datos sensibles.
+La app no pide login ni clave y la sincronizacion queda abierta para cualquier persona que tenga la URL del Web App. Tampoco hay cifrado local. No debe usarse para recolectar datos sensibles. El backend valida campos, evita formulas ejecutables en Sheets y deduplica reintentos por `submissionId`, pero no reemplaza una capa de autenticacion o rate limiting.
 
 ## Verificacion
 
 1. Ejecutar localmente desde `127.0.0.1`.
-2. Confirmar que el panel superior indique acceso abierto.
+2. Confirmar que no haya login ni clave y que aparezca el aviso global de no cargar informacion sensible.
 3. Completar perfil online y confirmar fila en `Perfiles`.
 4. Completar cada modulo y confirmar su pestana.
 5. Cortar internet, completar un modulo y revisar que quede pendiente.
 6. Reconectar y confirmar sincronizacion.
-7. Recargar y confirmar que el progreso local persiste.
-8. Abrir DevTools > Application y confirmar service worker activo.
-9. Publicar en GitHub Pages y confirmar `index.html`, `sw.js`, `manifest.webmanifest` e iconos.
+7. Forzar un payload invalido en un entorno de prueba y confirmar estado `error sync` sin reintento infinito.
+8. Usar **Exportar pendientes** y confirmar que descarga un JSON de respaldo.
+9. Recargar y confirmar que el progreso local persiste.
+10. Abrir DevTools > Application y confirmar service worker activo.
+11. Publicar en GitHub Pages y confirmar `index.html`, `sw.js`, `manifest.webmanifest` e iconos.
 
 ## Publicacion
 
@@ -135,7 +137,7 @@ Publicar desde rama `main`, carpeta raiz.
 - Si cambia un campo de formulario, actualizar tambien `scripts/google-apps-script.js` y `docs/google-sheets.md`.
 - Si se agregan assets, actualizar `sw.js`.
 - Si cambia la URL de Apps Script, actualizar `config.js`.
-- Si se cambia `sw.js`, subir version de `CACHE_NAME` para forzar cache nuevo.
+- Si se cambia `sw.js`, subir version de `CACHE_NAME` y `appVersion` para forzar cache nuevo.
 
 ## Configuracion de Apps Script
 
@@ -165,12 +167,14 @@ Para actualizar el despliegue:
    ```
 
 2. Abrir `http://127.0.0.1:8002/` en una ventana privada o despues de limpiar service workers.
-3. Confirmar que la app muestre acceso abierto en el panel superior.
+3. Confirmar que la app no pida login ni clave.
 4. Completar el perfil y al menos un modulo del recorrido.
 5. Desconectar internet, completar otro modulo y confirmar que queda guardado localmente.
 6. Reconectar internet, usar **Sincronizar** y confirmar que desaparece la cola pendiente.
 7. Revisar en Google Sheets que se haya creado o actualizado la hoja correspondiente.
-8. Confirmar que `appVersion`, `participantId`, `submissionId` y `payloadJson` quedaron registrados.
+8. Reenviar el mismo `submissionId` en un entorno de prueba y confirmar que no duplica fila.
+9. Enviar un valor de prueba que empiece con `=` y confirmar que queda como texto, no como formula.
+10. Confirmar que `appVersion`, `participantId`, `submissionId` y `payloadJson` quedaron registrados.
 
 ## Recuperacion
 
