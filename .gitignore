@@ -2,7 +2,6 @@
 .agents/
 .codex/
 .serena/
-AGENTS.md
 *.tmp
 *.log
 node_modules/
