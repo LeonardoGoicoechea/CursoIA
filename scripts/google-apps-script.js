@@ -1,7 +1,5 @@
 const PROPERTY_KEYS = {
-  spreadsheetId: "CURSOIA_SPREADSHEET_ID",
-  googleClientId: "CURSOIA_GOOGLE_CLIENT_ID",
-  allowedEmails: "CURSOIA_ALLOWED_EMAILS"
+  spreadsheetId: "CURSOIA_SPREADSHEET_ID"
 };
 
 const DEFAULT_MAX_LENGTH = 1200;
@@ -127,7 +125,6 @@ function doPost(event) {
   try {
     lock.waitLock(10000);
     const data = parseRequest(event);
-    validateGoogleIdentity(data);
     const moduleConfig = validateModule(data);
     data.payload = validatePayload(data.payload, moduleConfig.fields);
     const sheet = getSheet(moduleConfig.sheet);
@@ -167,69 +164,7 @@ function parseRequest(event) {
   }
 }
 
-function validateGoogleIdentity(data) {
-  const idToken = String(data.idToken || "").trim();
-  if (!idToken) {
-    throw new Error("Inicia sesion con Google para sincronizar.");
-  }
-
-  const tokenInfo = fetchGoogleTokenInfo(idToken);
-  const expectedAudience = getRequiredProperty(PROPERTY_KEYS.googleClientId);
-  if (tokenInfo.aud !== expectedAudience) {
-    throw new Error("La sesion de Google no corresponde a esta app.");
-  }
-
-  const issuer = String(tokenInfo.iss || "");
-  if (issuer !== "accounts.google.com" && issuer !== "https://accounts.google.com") {
-    throw new Error("La sesion de Google no es valida.");
-  }
-
-  if (String(tokenInfo.email_verified) !== "true") {
-    throw new Error("La cuenta de Google no tiene email verificado.");
-  }
-
-  const email = String(tokenInfo.email || "").trim().toLowerCase();
-  if (!email) {
-    throw new Error("No se pudo identificar el email de Google.");
-  }
-
-  validateAuthorizedEmail(email);
-}
-
-function fetchGoogleTokenInfo(idToken) {
-  const response = UrlFetchApp.fetch(
-    "https://oauth2.googleapis.com/tokeninfo?id_token=" + encodeURIComponent(idToken),
-    { muteHttpExceptions: true }
-  );
-
-  if (response.getResponseCode() !== 200) {
-    throw new Error("La sesion de Google expiro o no es valida.");
-  }
-
-  try {
-    return JSON.parse(response.getContentText());
-  } catch (error) {
-    throw new Error("No se pudo validar la sesion de Google.");
-  }
-}
-
-function validateAuthorizedEmail(email) {
-  const allowedEntries = getAllowedEmailEntries();
-  const allowed = allowedEntries.some((entry) => entry.startsWith("@") ? email.endsWith(entry) : email === entry);
-  if (!allowed) {
-    throw new Error("Cuenta de Google no autorizada.");
-  }
-}
-
-function getAllowedEmailEntries() {
-  return getRequiredProperty(PROPERTY_KEYS.allowedEmails)
-    .split(/[\n,;]/)
-    .map((entry) => entry.trim().toLowerCase())
-    .filter(Boolean);
-}
-
 function validateModule(data) {
-  delete data.idToken;
   if (!data.module || !MODULES[data.module]) {
     throw new Error("Modulo desconocido.");
   }

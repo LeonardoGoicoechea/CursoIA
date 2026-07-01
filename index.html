@@ -43,17 +43,13 @@
       <section class="workspace">
         <p class="status" id="status" role="status" aria-live="polite">Listo para trabajar. Los avances se guardan en este dispositivo.</p>
 
-        <section class="sync-config-panel" aria-label="Acceso de sincronizacion">
+        <section class="sync-config-panel" aria-label="Estado de sincronizacion">
           <div class="module-heading">
             <p class="step-label">Configuracion del dispositivo</p>
-            <h3>Ingresar con Google</h3>
-            <p class="sync-config-copy">La app ya no usa una clave compartida. Inicia sesion con una cuenta autorizada para enviar datos a Google Sheets.</p>
+            <h3>Acceso abierto</h3>
+            <p class="sync-config-copy">La app no pide login ni clave. Cualquier persona puede completar el recorrido y, si el endpoint esta configurado, sincronizar con Google Sheets.</p>
           </div>
-          <div class="actions-row">
-            <div class="google-signin-button" id="googleSignInButton" aria-live="polite"></div>
-            <button class="secondary-action danger" type="button" id="clearSyncSessionButton">Cerrar sesion</button>
-          </div>
-          <p class="sync-config-state" id="syncSessionState">Cargando acceso con Google...</p>
+          <p class="sync-config-state" id="syncAccessState">Acceso abierto. Cualquier persona puede usar la app y sincronizar sin iniciar sesion.</p>
         </section>
 
         <section class="module active" id="bienvenida" data-module-view="welcome">
@@ -352,6 +348,5 @@
 
     <script src="config.js"></script>
     <script src="app.js"></script>
-    <script src="https://accounts.google.com/gsi/client" async defer onload="window.cursoiaInitGoogleIdentity && window.cursoiaInitGoogleIdentity()" onerror="window.cursoiaGoogleIdentityFailed && window.cursoiaGoogleIdentityFailed()"></script>
   </body>
 </html>

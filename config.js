@@ -1,7 +1,6 @@
 window.COURSE_REGISTRATION_CONFIG = {
   googleAppsScriptUrl: "https://script.google.com/macros/s/AKfycbzWwijIWQDt1UH6LHnvLBwHyG7uiTkXOvwxnnZWvHA6XMhFkDYLbZj32LZIJRIH1-FG/exec",
-  googleClientId: "",
   requestTimeoutMs: 12000,
-  appVersion: "1.2.0",
+  appVersion: "1.3.0",
   releaseDates: {}
 };

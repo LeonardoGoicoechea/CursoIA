@@ -1,4 +1,4 @@
-const CACHE_NAME = "cursoia-v1.2.0";
+const CACHE_NAME = "cursoia-v1.3.0";
 const APP_SHELL = "./index.html";
 const ASSETS = [
   APP_SHELL,

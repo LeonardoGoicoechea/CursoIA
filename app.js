@@ -31,7 +31,7 @@ const MODULE_FIELDS = {
   manifesto: ["willDelegate", "willPreserve", "ethicalLimit", "verificationPractice", "thirtyDayCommitment", "signature"]
 };
 
-const STORAGE_SCHEMA_VERSION = "4";
+const STORAGE_SCHEMA_VERSION = "5";
 
 const STORAGE_KEYS = {
   participantId: "cursoiaParticipantId",
@@ -49,20 +49,13 @@ const summaryListEl = document.querySelector("#summaryList");
 const installButton = document.querySelector("#installButton");
 const syncButton = document.querySelector("#syncButton");
 const resetButton = document.querySelector("#resetButton");
-const googleSignInButtonEl = document.querySelector("#googleSignInButton");
-const clearSyncSessionButton = document.querySelector("#clearSyncSessionButton");
-const syncSessionStateEl = document.querySelector("#syncSessionState");
+const syncAccessStateEl = document.querySelector("#syncAccessState");
 const captureCopyEl = document.querySelector("#captureCopy");
 const navLinks = [...document.querySelectorAll("[data-target]")];
 const views = [...document.querySelectorAll("[data-module-view]")];
 
 let deferredInstallPrompt = null;
 let syncing = false;
-let googleIdentityReady = false;
-let googleIdentityFailed = false;
-let googleButtonRendered = false;
-
-const SYNC_SESSION_GRACE_MS = 60 * 1000;
 
 const captureCopy = {
   leader: {
@@ -98,108 +91,15 @@ const writeJson = (key, value) => {
   localStorage.setItem(key, JSON.stringify(value));
 };
 
-const googleClientConfigured = () =>
-  typeof CONFIG.googleClientId === "string" && CONFIG.googleClientId.includes(".apps.googleusercontent.com");
-
-const parseJsonWebTokenPayload = (token) => {
-  try {
-    const payloadSegment = token.split(".")[1];
-    if (!payloadSegment) return null;
-    const normalized = payloadSegment.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
-    const json = window.atob(padded);
-    const decoded = decodeURIComponent(
-      [...json].map((char) => `%${char.charCodeAt(0).toString(16).padStart(2, "0")}`).join("")
-    );
-    return JSON.parse(decoded);
-  } catch {
-    return null;
-  }
-};
-
-const readSyncSession = () => {
-  const session = readJson(STORAGE_KEYS.syncSession, null);
-  if (!session || typeof session !== "object") return null;
-
-  const idToken = typeof session.idToken === "string" ? session.idToken.trim() : "";
-  const email = typeof session.email === "string" ? session.email.trim().toLowerCase() : "";
-  const expiresAt = Number(session.expiresAt);
-
-  if (!idToken || !email || !Number.isFinite(expiresAt)) {
-    localStorage.removeItem(STORAGE_KEYS.syncSession);
-    return null;
-  }
-
-  if (expiresAt <= Date.now() + SYNC_SESSION_GRACE_MS) {
-    localStorage.removeItem(STORAGE_KEYS.syncSession);
-    return null;
-  }
-
-  return { idToken, email, expiresAt };
-};
-
-const syncSessionConfigured = () => Boolean(readSyncSession());
-
 const syncRequirementMessage = () => {
-  if (!endpointConfigured()) return "Endpoint no configurado.";
-  if (!googleClientConfigured()) return "Falta configurar Google Sign-In en este despliegue.";
-  if (googleIdentityFailed) return "No se pudo cargar el acceso con Google para sincronizar.";
-  return "Inicia sesion con Google para sincronizar.";
+  if (!endpointConfigured()) return "Sincronizacion no configurada en este despliegue.";
+  return "Acceso abierto. Cualquier persona puede usar la app y sincronizar sin iniciar sesion.";
 };
 
-const renderSyncSessionState = () => {
-  const session = readSyncSession();
-  if (syncSessionStateEl) {
-    syncSessionStateEl.textContent = session
-      ? `Sesion activa: ${session.email}`
-      : googleClientConfigured() && !googleIdentityFailed && !googleIdentityReady
-        ? "Cargando acceso con Google..."
-        : syncRequirementMessage();
+const renderSyncAccessState = () => {
+  if (syncAccessStateEl) {
+    syncAccessStateEl.textContent = syncRequirementMessage();
   }
-
-  if (clearSyncSessionButton) {
-    clearSyncSessionButton.disabled = !session;
-  }
-
-  if (googleSignInButtonEl && (!googleIdentityReady || !googleClientConfigured() || googleIdentityFailed)) {
-    googleSignInButtonEl.innerHTML = "";
-    googleButtonRendered = false;
-  }
-
-  if (googleSignInButtonEl && googleIdentityReady && !googleButtonRendered && googleClientConfigured()) {
-    googleSignInButtonEl.innerHTML = "";
-    window.google.accounts.id.renderButton(googleSignInButtonEl, {
-      theme: "outline",
-      size: "large",
-      text: "signin_with",
-      shape: "pill"
-    });
-    googleButtonRendered = true;
-  }
-};
-
-const writeSyncSession = (idToken) => {
-  const payload = parseJsonWebTokenPayload(idToken);
-  const email = typeof payload?.email === "string" ? payload.email.trim().toLowerCase() : "";
-  const expiresAt = Number(payload?.exp) * 1000;
-
-  if (!email || !Number.isFinite(expiresAt)) {
-    throw new Error("No se pudo leer la sesion de Google.");
-  }
-
-  if (payload.email_verified === false || payload.email_verified === "false") {
-    throw new Error("La cuenta de Google no tiene email verificado.");
-  }
-
-  const session = { idToken, email, expiresAt };
-  writeJson(STORAGE_KEYS.syncSession, session);
-  renderSyncSessionState();
-  return session;
-};
-
-const clearSyncSession = () => {
-  localStorage.removeItem(STORAGE_KEYS.syncSession);
-  renderSyncSessionState();
 };
 
 const getParticipantId = () => {
@@ -217,9 +117,6 @@ const setStatus = (message, tone = "info") => {
 
 const endpointConfigured = () =>
   typeof CONFIG.googleAppsScriptUrl === "string" && CONFIG.googleAppsScriptUrl.startsWith("https://");
-
-const isSyncAuthorizationError = (error) =>
-  /google|sesion|cuenta|audiencia|email verificado/i.test(error?.message || "");
 
 const moduleMeta = (moduleId) => MODULES.find((item) => item.id === moduleId);
 
@@ -357,9 +254,7 @@ const migrateLocalState = () => {
     payload: MODULE_FIELDS[item.module] ? filterModulePayload(item.module, item.payload || {}) : item.payload
   })));
   localStorage.removeItem(STORAGE_KEYS.syncToken);
-  if (!readSyncSession()) {
-    localStorage.removeItem(STORAGE_KEYS.syncSession);
-  }
+  localStorage.removeItem(STORAGE_KEYS.syncSession);
   localStorage.setItem(STORAGE_KEYS.schemaVersion, STORAGE_SCHEMA_VERSION);
 };
 
@@ -435,8 +330,6 @@ const validateForm = (form) => {
 
 const sendEnvelope = async (envelope) => {
   if (!endpointConfigured()) throw new Error("Endpoint no configurado.");
-  const syncSession = readSyncSession();
-  if (!syncSession) throw new Error(syncRequirementMessage());
 
   const controller = new AbortController();
   const timeout = window.setTimeout(
@@ -449,10 +342,7 @@ const sendEnvelope = async (envelope) => {
       method: "POST",
       redirect: "follow",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({
-        idToken: syncSession.idToken,
-        ...envelope
-      }),
+      body: JSON.stringify(envelope),
       signal: controller.signal
     });
 
@@ -468,13 +358,12 @@ const sendEnvelope = async (envelope) => {
 };
 
 const syncQueue = async () => {
-  if (syncing || !navigator.onLine || !endpointConfigured() || !syncSessionConfigured()) return;
+  if (syncing || !navigator.onLine || !endpointConfigured()) return;
   const queue = refreshStoredQueue().map(prepareQueuedEnvelope);
   if (queue.length === 0) return;
 
   syncing = true;
   const remaining = [];
-  let blockedByAuth = "";
 
   for (let index = 0; index < queue.length; index += 1) {
     const item = queue[index];
@@ -488,22 +377,12 @@ const syncQueue = async () => {
         syncedAt: nowIso()
       });
     } catch (error) {
-      if (isSyncAuthorizationError(error)) {
-        blockedByAuth = error.message || syncRequirementMessage();
-        remaining.push(item, ...queue.slice(index + 1));
-        break;
-      }
       remaining.push(item);
     }
   }
 
   writeQueue(remaining);
   syncing = false;
-
-  if (blockedByAuth) {
-    setStatus(blockedByAuth, "warning");
-    return;
-  }
 
   if (remaining.length === 0) {
     setStatus("Registros pendientes sincronizados.", "success");
@@ -528,7 +407,7 @@ const saveModule = async (moduleId, payload) => {
 
   const envelope = buildEnvelope(moduleId, payload);
 
-  if (!syncSessionConfigured()) {
+  if (!endpointConfigured()) {
     enqueue(envelope);
     setStatus(`${meta.label} guardado localmente. ${syncRequirementMessage()}`, "warning");
     return;
@@ -745,14 +624,8 @@ document.querySelectorAll("[data-audience]").forEach((button) => {
   });
 });
 
-clearSyncSessionButton?.addEventListener("click", () => {
-  clearSyncSession();
-  window.google?.accounts?.id?.disableAutoSelect?.();
-  setStatus("Sesion de sincronizacion cerrada en este dispositivo.", "warning");
-});
-
 syncButton?.addEventListener("click", () => {
-  if (!syncSessionConfigured()) {
+  if (!endpointConfigured()) {
     setStatus(syncRequirementMessage(), "warning");
     return;
   }
@@ -765,7 +638,7 @@ resetButton?.addEventListener("click", () => {
   Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key));
   getParticipantId();
   hydrateForms();
-  renderSyncSessionState();
+  renderSyncAccessState();
   renderProgress();
   setStatus("Datos locales reiniciados.", "warning");
 });
@@ -798,63 +671,17 @@ if ("serviceWorker" in navigator) {
   });
 }
 
-const initializeGoogleIdentity = () => {
-  if (googleIdentityReady || !googleClientConfigured() || !window.google?.accounts?.id) {
-    renderSyncSessionState();
-    return;
-  }
-
-  try {
-    window.google.accounts.id.initialize({
-      client_id: CONFIG.googleClientId,
-      callback: async (response) => {
-        try {
-          const session = writeSyncSession(response?.credential || "");
-          setStatus(`Sesion de Google activa para ${session.email}.`, "success");
-          await syncQueue();
-        } catch (error) {
-          clearSyncSession();
-          setStatus(error.message || "No se pudo iniciar sesion con Google.", "warning");
-        }
-      }
-    });
-    googleIdentityReady = true;
-    googleIdentityFailed = false;
-    googleButtonRendered = false;
-  } catch {
-    googleIdentityFailed = true;
-    setStatus("No se pudo preparar el acceso con Google para sincronizar.", "warning");
-  }
-
-  renderSyncSessionState();
-};
-
-window.cursoiaInitGoogleIdentity = () => {
-  initializeGoogleIdentity();
-};
-
-window.cursoiaGoogleIdentityFailed = () => {
-  googleIdentityFailed = true;
-  renderSyncSessionState();
-};
-
 migrateLocalState();
 getParticipantId();
 prepareInlineContinueButtons();
 renderCaptureCopy();
 hydrateForms();
-renderSyncSessionState();
+renderSyncAccessState();
 refreshStoredQueue();
 renderProgress();
 
-if (window.google?.accounts?.id) {
-  initializeGoogleIdentity();
-}
-
-if (endpointConfigured() && !googleClientConfigured()) {
-  setStatus("Falta configurar Google Sign-In. Los avances se guardaran localmente hasta activarlo.", "warning");
-} else if (endpointConfigured() && !syncSessionConfigured()) {
-  setStatus("Inicia sesion con Google. Los avances se guardaran localmente hasta sincronizarlos.", "warning");
+if (!endpointConfigured()) {
+  setStatus("Sin endpoint de sincronizacion. Los avances se guardaran localmente en este dispositivo.", "warning");
 }
 
 const initialHash = window.location.hash.replace("#", "");

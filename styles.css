@@ -310,12 +310,6 @@ h3 {
   font-weight: 800;
 }
 
-.google-signin-button {
-  display: flex;
-  align-items: center;
-  min-height: 40px;
-}
-
 .continue-action {
   min-height: 44px;
   padding: 11px 16px;
