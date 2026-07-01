@@ -43,20 +43,17 @@
       <section class="workspace">
         <p class="status" id="status" role="status" aria-live="polite">Listo para trabajar. Los avances se guardan en este dispositivo.</p>
 
-        <section class="sync-config-panel" aria-label="Configuracion de sincronizacion">
+        <section class="sync-config-panel" aria-label="Acceso de sincronizacion">
           <div class="module-heading">
             <p class="step-label">Configuracion del dispositivo</p>
-            <h3>Clave de sincronizacion</h3>
-            <p class="sync-config-copy">Ingresa la clave entregada por el facilitador. Se guarda solo en este navegador y ya no queda publicada en <code>config.js</code>.</p>
+            <h3>Ingresar con Google</h3>
+            <p class="sync-config-copy">La app ya no usa una clave compartida. Inicia sesion con una cuenta autorizada para enviar datos a Google Sheets.</p>
           </div>
-          <label>Clave de sincronizacion
-            <input id="syncTokenInput" type="password" autocomplete="new-password" spellcheck="false" maxlength="160" placeholder="Pegar clave de sincronizacion">
-          </label>
           <div class="actions-row">
-            <button class="secondary-action" type="button" id="saveSyncTokenButton">Guardar clave</button>
-            <button class="secondary-action danger" type="button" id="clearSyncTokenButton">Borrar clave</button>
+            <div class="google-signin-button" id="googleSignInButton" aria-live="polite"></div>
+            <button class="secondary-action danger" type="button" id="clearSyncSessionButton">Cerrar sesion</button>
           </div>
-          <p class="sync-config-state" id="syncTokenState">Sin clave guardada en este dispositivo.</p>
+          <p class="sync-config-state" id="syncSessionState">Cargando acceso con Google...</p>
         </section>
 
         <section class="module active" id="bienvenida" data-module-view="welcome">
@@ -355,5 +352,6 @@
 
     <script src="config.js"></script>
     <script src="app.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer onload="window.cursoiaInitGoogleIdentity && window.cursoiaInitGoogleIdentity()" onerror="window.cursoiaGoogleIdentityFailed && window.cursoiaGoogleIdentityFailed()"></script>
   </body>
 </html>

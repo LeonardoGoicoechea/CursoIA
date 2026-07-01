@@ -21,7 +21,7 @@ La app guarda avances en el dispositivo, funciona offline despues del primer acc
 - `index.html`: estructura de la PWA y formularios del recorrido.
 - `styles.css`: interfaz responsive.
 - `app.js`: navegacion, guardado local, cola offline y sincronizacion.
-- `config.js`: URL publica de Google Apps Script y version de app.
+- `config.js`: URL publica de Google Apps Script, client ID de Google Sign-In y version de app.
 - `sw.js`: service worker y cache offline.
 - `manifest.webmanifest`: metadatos de instalacion.
 - `scripts/google-apps-script.js`: backend para Google Sheets.
@@ -49,6 +49,7 @@ Editar `config.js`:
 ```js
 window.COURSE_REGISTRATION_CONFIG = {
   googleAppsScriptUrl: "https://script.google.com/macros/s/DEPLOYMENT_ID/exec",
+  googleClientId: "TU_CLIENT_ID.apps.googleusercontent.com",
   requestTimeoutMs: 12000,
   appVersion: "1.0.0",
   releaseDates: {}
@@ -56,7 +57,7 @@ window.COURSE_REGISTRATION_CONFIG = {
 ```
 
 - `googleAppsScriptUrl`: URL `/exec` del despliegue Web App.
-- `CURSOIA_API_TOKEN`: se configura solo en Apps Script. La app pide la clave en la interfaz y la guarda localmente en cada dispositivo.
+- `googleClientId`: client ID OAuth web usado por Google Sign-In en la PWA.
 - `requestTimeoutMs`: espera maxima de cada envio.
 - `appVersion`: version enviada en cada payload.
 - `releaseDates`: reservado para liberar modulos por fecha en una version futura.
@@ -91,7 +92,7 @@ El Apps Script crea y usa estas pestanas:
 - `Manifiestos`
 - `Eventos`
 
-Pegar `scripts/google-apps-script.js` en Google Apps Script, configurar `CURSOIA_SPREADSHEET_ID` y `CURSOIA_API_TOKEN` como Script properties, desplegar como Web App, copiar la URL `/exec` en `config.js` e ingresar la clave de sincronizacion desde la UI de la app en cada dispositivo que vaya a sincronizar.
+Pegar `scripts/google-apps-script.js` en Google Apps Script, configurar `CURSOIA_SPREADSHEET_ID`, `CURSOIA_GOOGLE_CLIENT_ID` y `CURSOIA_ALLOWED_EMAILS` como Script properties, desplegar como Web App, copiar la URL `/exec` en `config.js`, cargar el mismo `googleClientId` en la PWA e iniciar sesion con una cuenta autorizada para sincronizar.
 
 ## Privacidad
 
@@ -101,12 +102,12 @@ La app muestra un aviso minimo:
 No ingreses nombres reales de clientes, pacientes, empleados ni informacion confidencial. Usa ejemplos anonimizados.
 ```
 
-No hay login ni cifrado local en esta version. No debe usarse para recolectar datos sensibles.
+La sincronizacion requiere inicio de sesion con Google, pero sigue sin haber cifrado local. No debe usarse para recolectar datos sensibles.
 
 ## Verificacion
 
 1. Ejecutar localmente desde `127.0.0.1`.
-2. Ingresar la clave de sincronizacion en el panel superior.
+2. Iniciar sesion con Google en el panel superior.
 3. Completar perfil online y confirmar fila en `Perfiles`.
 4. Completar cada modulo y confirmar su pestana.
 5. Cortar internet, completar un modulo y revisar que quede pendiente.
@@ -135,31 +136,38 @@ Publicar desde rama `main`, carpeta raiz.
 
 - Si cambia un campo de formulario, actualizar tambien `scripts/google-apps-script.js` y `docs/google-sheets.md`.
 - Si se agregan assets, actualizar `sw.js`.
-- Si cambia la URL de Apps Script, actualizar `config.js`.
+- Si cambia la URL de Apps Script o el client ID de Google, actualizar `config.js`.
+- Si cambia el dominio/origen desde donde se publica la PWA, actualizar tambien el cliente OAuth en Google Cloud.
 - Si se cambia `sw.js`, subir version de `CACHE_NAME` para forzar cache nuevo.
-## Configuracion segura de Apps Script
+
+## Configuracion segura de Apps Script y Google Sign-In
 
 En el proyecto de Apps Script, abrir **Project Settings > Script properties** y crear:
 
 ```text
 CURSOIA_SPREADSHEET_ID = ID_DE_LA_PLANILLA
-CURSOIA_API_TOKEN = CLAVE_LARGA_DE_SINCRONIZACION
+CURSOIA_GOOGLE_CLIENT_ID = TU_CLIENT_ID.apps.googleusercontent.com
+CURSOIA_ALLOWED_EMAILS = facilitador@empresa.com,@empresa.com
 ```
 
-El backend lee esos valores con `PropertiesService`; no deben quedar hardcodeados en `scripts/google-apps-script.js` ni publicados en `config.js`.
+`CURSOIA_ALLOWED_EMAILS` acepta emails exactos y entradas por dominio que empiezan con `@`.
 
-Para rotar el token:
+El backend lee esos valores con `PropertiesService`; no deben quedar hardcodeados en `scripts/google-apps-script.js`.
 
-1. Generar un token nuevo:
+Tambien hace falta crear un cliente OAuth web en Google Cloud y copiar su client ID en `config.js`. En **Authorized JavaScript origins** incluir al menos:
 
-   ```powershell
-   node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
-   ```
+```text
+http://127.0.0.1:8000
+http://127.0.0.1:8002
+https://leonardogoicoechea.github.io
+```
 
-2. Reemplazar `CURSOIA_API_TOKEN` en Script properties.
-3. Publicar una nueva version del Web App si corresponde.
-4. Pedir a cada dispositivo que borre la clave anterior y cargue la nueva desde la UI.
-5. Subir `appVersion` y `CACHE_NAME` para que la PWA tome la version nueva.
+Para actualizar quienes pueden sincronizar:
+
+1. Editar `CURSOIA_ALLOWED_EMAILS` en Script properties.
+2. Publicar una nueva version del Web App si corresponde.
+3. Si cambia el OAuth client, actualizar tambien `CURSOIA_GOOGLE_CLIENT_ID` en Apps Script y `googleClientId` en `config.js`.
+4. Subir `appVersion` y `CACHE_NAME` para que la PWA tome la version nueva.
 
 ## QA manual minimo
 
@@ -170,7 +178,7 @@ Para rotar el token:
    ```
 
 2. Abrir `http://127.0.0.1:8002/` en una ventana privada o despues de limpiar service workers.
-3. Ingresar la clave de sincronizacion en el panel superior.
+3. Iniciar sesion con una cuenta Google autorizada en el panel superior.
 4. Completar el perfil y al menos un modulo del recorrido.
 5. Desconectar internet, completar otro modulo y confirmar que queda guardado localmente.
 6. Reconectar internet, usar **Sincronizar** y confirmar que desaparece la cola pendiente.
@@ -193,7 +201,7 @@ Ejecutar:
 node tools/smoke-test.js
 ```
 
-La prueba verifica que los formularios principales existan, que los campos esperados tengan `maxlength`, que la app conserve persistencia/sincronizacion y que `config.js` tenga endpoint sin publicar el token.
+La prueba verifica que los formularios principales existan, que los campos esperados tengan `maxlength`, que la app conserve persistencia/sincronizacion y que `config.js` tenga endpoint y `googleClientId` sin publicar una clave compartida.
 
 Para una comprobacion visual rapida con Playwright:
 

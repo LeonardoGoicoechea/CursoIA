@@ -112,23 +112,37 @@ Luego agrega columnas especificas de cada modulo y una columna `payloadJson` con
 
    ```text
    CURSOIA_SPREADSHEET_ID = ID_DE_LA_PLANILLA
-   CURSOIA_API_TOKEN = CLAVE_LARGA_DE_SINCRONIZACION
+   CURSOIA_GOOGLE_CLIENT_ID = TU_CLIENT_ID.apps.googleusercontent.com
+   CURSOIA_ALLOWED_EMAILS = facilitador@empresa.com,@empresa.com
    ```
+
+   `CURSOIA_ALLOWED_EMAILS` acepta emails exactos y entradas por dominio que empiezan con `@`.
 
    No guardar estos valores hardcodeados dentro de `scripts/google-apps-script.js`.
 6. Guardar.
-7. Desplegar > Nueva implementacion > Aplicacion web.
-8. Ejecutar como: propietario del script.
-9. Acceso: cualquier usuario con el enlace.
-10. Copiar la URL que termina en `/exec`.
-11. Pegar la URL en `config.js` como `googleAppsScriptUrl`.
-12. Abrir la app y pegar la clave en el panel **Clave de sincronizacion** de cada dispositivo que vaya a enviar datos.
+7. Crear un cliente OAuth web en Google Cloud para Google Sign-In.
+8. En **Authorized JavaScript origins** incluir los dominios desde donde corre la PWA, por ejemplo:
+
+   ```text
+   http://127.0.0.1:8000
+   http://127.0.0.1:8002
+   https://leonardogoicoechea.github.io
+   ```
+
+9. Copiar el client ID generado por Google Cloud.
+10. Desplegar > Nueva implementacion > Aplicacion web.
+11. Ejecutar como: propietario del script.
+12. Acceso: cualquier usuario con el enlace.
+13. Copiar la URL que termina en `/exec`.
+14. Pegar la URL en `config.js` como `googleAppsScriptUrl`.
+15. Pegar el mismo client ID en `config.js` como `googleClientId`.
+16. Abrir la app e iniciar sesion con una cuenta autorizada para sincronizar.
 
 ## Payload esperado
 
 ```json
 {
-  "token": "cargado_desde_el_dispositivo",
+  "idToken": "JWT_DE_GOOGLE",
   "submissionId": "uuid",
   "module": "profile",
   "participantId": "uuid",
@@ -177,7 +191,10 @@ Respuesta con error:
 - Verificar conexion.
 - Revisar consola del navegador.
 - Confirmar que Apps Script responda JSON.
-- Revisar si la clave cargada en el dispositivo coincide con `CURSOIA_API_TOKEN`.
+- Confirmar que la persona haya iniciado sesion con Google en la app.
+- Revisar si la cuenta usada esta incluida en `CURSOIA_ALLOWED_EMAILS`.
+- Confirmar que `googleClientId` en `config.js` coincida con `CURSOIA_GOOGLE_CLIENT_ID`.
+- Revisar que el dominio actual de la app este cargado en **Authorized JavaScript origins** del cliente OAuth.
 
 ### Se crea una pestana pero faltan columnas
 
@@ -198,32 +215,26 @@ Respuesta con error:
 ## Validacion y seguridad
 
 - El backend rechaza modulos desconocidos, campos no permitidos, tipos no textuales, campos obligatorios vacios y textos que superen los limites definidos.
-- El backend exige `CURSOIA_API_TOKEN`; si falta la Script Property, no acepta envios.
-- `CURSOIA_SPREADSHEET_ID` y `CURSOIA_API_TOKEN` se leen desde `PropertiesService`, no desde constantes hardcodeadas ni desde `config.js`.
+- El backend exige un `idToken` de Google valido, con `aud` igual a `CURSOIA_GOOGLE_CLIENT_ID`, email verificado y cuenta permitida por `CURSOIA_ALLOWED_EMAILS`.
+- `CURSOIA_SPREADSHEET_ID`, `CURSOIA_GOOGLE_CLIENT_ID` y `CURSOIA_ALLOWED_EMAILS` se leen desde `PropertiesService`, no desde constantes hardcodeadas.
 - La matriz completa de campos, hojas y limites esta en `docs/field-matrix.md`.
 
-## Rotacion del token
+## Gestion de accesos
 
-1. Generar un token nuevo:
-
-   ```powershell
-   node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
-   ```
-
-2. Actualizar `CURSOIA_API_TOKEN` en Script properties.
-3. Pedir a cada dispositivo que cargue la nueva clave desde la UI de la app.
-4. Subir `appVersion` para invalidar el cache general; `config.js` usa `network-first`, asi que online deberia captar el cambio aun antes del recache completo.
-5. Probar un envio real y verificar la hoja correspondiente.
+1. Actualizar `CURSOIA_ALLOWED_EMAILS` en Script properties para agregar o quitar cuentas.
+2. Si cambia el cliente OAuth, actualizar `CURSOIA_GOOGLE_CLIENT_ID` en Apps Script y `googleClientId` en `config.js`.
+3. Subir `appVersion` para invalidar el cache general; `config.js` usa `network-first`, asi que online deberia captar el cambio aun antes del recache completo.
+4. Probar un envio real y verificar la hoja correspondiente.
 
 ## Checklist QA de sincronizacion
 
-1. Cargar la clave de sincronizacion en la app.
+1. Iniciar sesion con Google en la app.
 2. Completar `profile` con conexion activa y verificar la hoja `Perfiles`.
 3. Cortar conexion, completar otro modulo y confirmar que la app informa guardado local.
 4. Restaurar conexion y presionar **Sincronizar**.
 5. Confirmar que la cola pendiente queda vacia.
 6. Revisar en Sheets `savedAt`, `timestamp`, `submissionId`, `participantId`, `module`, `appVersion` y `payloadJson`.
-7. Enviar un payload con token invalido desde una herramienta de prueba y confirmar que responde `ok: false`.
+7. Enviar un payload con `idToken` invalido o con una cuenta no autorizada y confirmar que responde `ok: false`.
 
 ## Recuperacion operativa
 
