@@ -3,11 +3,14 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Bitacora guiada del taller CursoIA para observar tareas reales, probar experimentos seguros y cerrar con criterio humano.">
     <meta name="theme-color" content="#0E1413">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CursoIA">
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="icons/icon-192.svg">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
     <link rel="stylesheet" href="styles.css">
     <title>CursoIA</title>
   </head>
@@ -27,7 +30,7 @@
           <span id="progressCount">0/7</span>
           <strong>avance guardado</strong>
         </div>
-        <nav class="module-nav" id="moduleNav">
+        <nav class="module-nav" id="moduleNav" aria-label="Modulos del taller">
           <a href="#bienvenida" data-target="welcome">Bienvenida</a>
           <a href="#perfil" data-target="profile">Perfil</a>
           <a href="#termometro1" data-target="thermometer1">Termometro 1</a>
@@ -41,14 +44,14 @@
       </aside>
 
       <section class="workspace">
-        <p class="status" id="status" role="status" aria-live="polite">Listo para trabajar. Los avances se guardan en este dispositivo.</p>
+        <p class="status" id="status" role="status" aria-live="polite" aria-atomic="true">Listo para trabajar. Los avances se guardan en este dispositivo.</p>
 
         <section class="module active" id="bienvenida" data-module-view="welcome">
           <div class="module-heading">
             <p class="step-label">Inicio</p>
             <h2>Elegir desde donde entra cada alumno</h2>
             <p>La PWA adapta el mensaje inicial segun si la persona lidera equipos o busca mejorar su propio trabajo.</p>
-            <p class="privacy-note">No ingreses nombres reales de clientes, pacientes, empleados ni informacion confidencial. Usa ejemplos anonimizados.</p>
+            <p class="privacy-note" id="privacyHint">No ingreses nombres reales de clientes, pacientes, empleados ni informacion confidencial. Usa ejemplos anonimizados.</p>
           </div>
           <div class="audience-switch" role="group" aria-label="Tipo de participante">
             <button type="button" class="audience-card active" data-audience="leader">
@@ -84,8 +87,9 @@
                 <input name="phone" autocomplete="tel" required minlength="6" maxlength="40">
               </label>
               <label>Edad
-                <input name="age" type="number" min="13" max="99" required maxlength="20">
+                <input name="age" type="number" inputmode="numeric" autocomplete="bday-year" min="13" max="99" step="1" required aria-describedby="ageHelp privacyHint">
               </label>
+              <p class="sr-only" id="ageHelp">Ingresa una edad entera entre 13 y 99 anos.</p>
               <label>Rol actual
                 <input name="role" required placeholder="Ej. responsable de RRHH" maxlength="160">
               </label>
@@ -329,7 +333,7 @@
             <h2>Resumen del recorrido</h2>
             <p>Este panel muestra lo guardado en el dispositivo y que modulos ya fueron sincronizados.</p>
           </div>
-          <div class="summary-list" id="summaryList"></div>
+          <div class="summary-list" id="summaryList" aria-live="polite" aria-atomic="false"></div>
           <div class="actions-row">
             <button class="secondary-action" type="button" id="syncButton">Sincronizar pendientes</button>
             <button class="secondary-action" type="button" id="exportPendingButton">Exportar pendientes</button>

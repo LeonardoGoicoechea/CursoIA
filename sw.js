@@ -1,4 +1,4 @@
-const CACHE_NAME = "cursoia-v1.4.0";
+const CACHE_NAME = "cursoia-v1.4.1";
 const APP_SHELL = "./index.html";
 const ASSETS = [
   APP_SHELL,
@@ -6,6 +6,9 @@ const ASSETS = [
   "./app.js",
   "./config.js",
   "./manifest.webmanifest",
+  "./icons/apple-touch-icon.png",
+  "./icons/icon-192.png",
+  "./icons/icon-512.png",
   "./icons/icon-192.svg",
   "./icons/icon-512.svg"
 ];
