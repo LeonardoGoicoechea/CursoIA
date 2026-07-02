@@ -503,10 +503,19 @@ const showView = (viewId) => {
     viewId = firstPendingView();
   }
   views.forEach((view) => {
-    view.classList.toggle("active", view.dataset.moduleView === viewId);
+    const isActive = view.dataset.moduleView === viewId;
+    view.classList.toggle("active", isActive);
+    view.hidden = !isActive;
+    view.setAttribute("aria-hidden", String(!isActive));
   });
   navLinks.forEach((link) => {
-    link.classList.toggle("active", link.dataset.target === viewId);
+    const isActive = link.dataset.target === viewId;
+    link.classList.toggle("active", isActive);
+    if (isActive) {
+      link.setAttribute("aria-current", "page");
+    } else {
+      link.removeAttribute("aria-current");
+    }
   });
   hideContinueButtons();
   renderSummary();
